@@ -27,14 +27,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ronde {
+public class Ronde {
 
-    private int numero;                       // 1st ronde, 2nd, etc.
+    private int numero;                       // 1st Ronde, 2nd, etc.
     private LocalDateTime debut;
     private boolean close = false;            // statut
     private List<match> matchs = new ArrayList<>();
 
-    public ronde(int numero) {
+    public Ronde(int numero) {
         this.numero = numero;
         this.debut = LocalDateTime.now();
     }

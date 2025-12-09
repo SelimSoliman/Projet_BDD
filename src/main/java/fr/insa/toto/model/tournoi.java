@@ -26,36 +26,37 @@ package fr.insa.toto.model;
 import java.util.ArrayList;
 import java.util.List;
 
-public class tournoi {
+
+public class Tournoi {
 
     private String nom;
     private int nbTerrains;
     private int nbJoueursParEquipe;
 
-    private List<joueur> joueurs = new ArrayList<>();
-    private List<ronde> rondes = new ArrayList<>();
+    private List<Joueur> joueurs = new ArrayList<>();
+    private List<Ronde> rondes = new ArrayList<>();
 
-    public tournoi(String nom, int nbTerrains, int nbJoueursParEquipe) {
+    public Tournoi(String nom, int nbTerrains, int nbJoueursParEquipe) {
         this.nom = nom;
         this.nbTerrains = nbTerrains;
         this.nbJoueursParEquipe = nbJoueursParEquipe;
     }
 
-    public void ajouterJoueur(joueur j) {
+    public void ajouterJoueur(Joueur j) {
         joueurs.add(j);
     }
 
-    public List<joueur> getJoueurs() {
+    public List<Joueur> getJoueurs() {
         return joueurs;
     }
 
-    public ronde nouvelleronde() {
-        ronde r = new ronde(rondes.size() + 1);
+    public Ronde nouvelleronde() {
+        Ronde r = new Ronde(rondes.size() + 1);
         rondes.add(r);
         return r;
     }
 
-    public List<ronde> getRondes() {
+    public List<Ronde> getRondes() {
         return rondes;
     }
 
