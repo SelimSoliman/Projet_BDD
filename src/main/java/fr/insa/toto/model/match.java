@@ -1,4 +1,4 @@
- /*
+/*
 Copyright 2000- Francois de Bertrand de Beuvron
 
 This file is part of CoursBeuvron.
@@ -22,32 +22,6 @@ package fr.insa.toto.model;
  *
  * @author ThinkPad
  */
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-public class ronde {
-
-    private int numero;                       // 1st ronde, 2nd, etc.
-    private LocalDateTime debut;
-    private boolean close = false;            // statut
-    private List<match> matchs = new ArrayList<>();
-
-    public ronde(int numero) {
-        this.numero = numero;
-        this.debut = LocalDateTime.now();
-    }
-
-    public int getNumero() { return numero; }
-    public boolean isClose() { return close; }
-    public void clore() { this.close = true; }
-
-    public List<match> getmatchs() { return matchs; }
-
-    public void ajoutermatch(match m) {
-        this.matchs.add(m);
-    }
+class match {
+    
 }
-
-

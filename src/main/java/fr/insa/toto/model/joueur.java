@@ -22,6 +22,53 @@ package fr.insa.toto.model;
  *
  * @author ThinkPad
  */
+import java.time.LocalDate;
+
 public class joueur {
-    
+
+    private int id;                 // Identifiant unique BD
+    private String nom;
+    private String prenom;
+    private String surnom;
+    private String sexe;            // "H", "F", etc.
+    private LocalDate dateNaissance;
+
+    private int scoreTotal = 0;     // Somme des scores sur toutes les rondes
+
+    public joueur(int id, String nom, String prenom) {
+        this.id = id;
+        this.nom = nom;
+        this.prenom = prenom;
+    }
+
+    // ------- Getters & setters -------
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public String getNom() { return nom; }
+    public void setNom(String nom) { this.nom = nom; }
+
+    public String getPrenom() { return prenom; }
+    public void setPrenom(String prenom) { this.prenom = prenom; }
+
+    public String getSurnom() { return surnom; }
+    public void setSurnom(String surnom) { this.surnom = surnom; }
+
+    public String getSexe() { return sexe; }
+    public void setSexe(String sexe) { this.sexe = sexe; }
+
+    public LocalDate getDateNaissance() { return dateNaissance; }
+    public void setDateNaissance(LocalDate dateNaissance) { this.dateNaissance = dateNaissance; }
+
+    public int getScoreTotal() { return scoreTotal; }
+
+    public void ajouterScore(int score) {
+        this.scoreTotal += score;
+    }
+
+    @Override
+    public String toString() {
+        return prenom + " " + nom + " (" + scoreTotal + " pts)";
+    }
 }
+
