@@ -32,7 +32,7 @@ public class Joueur {
     private String sexe;            
     private int age;
 
-    private int scoreTotal = 0;     
+       
 
     public Joueur(int id, String nom, String prenom) {
         this.id = id;
@@ -59,14 +59,5 @@ public class Joueur {
     public int getAge() { return age; }
     public void setAge(int age) { this.age = age; }
 
-    public int getScoreTotal() { return scoreTotal; }
-
-    public void ajouterScore(int score) {
-        this.scoreTotal += score;
-    }
-
-    @Override
-    public String toString() {
-        return prenom + " " + nom + " (" + scoreTotal + " pts)";
-    }
+    
 }
