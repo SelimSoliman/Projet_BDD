@@ -1,12 +1,17 @@
+import fr.insa.beuvron.utils.database.ClasseMiroir;
 import java.util.List;
 import java.util.ArrayList;
 import fr.insa.toto.model.Joueur;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 
-public class Equipe {
+public class Equipe extends ClasseMiroir {
    
     private static final int TAILLE_REQUISE = 2;  
     
-    private int id;
+    
     private int matchId;
     private int nom;  
     private int score;
@@ -68,7 +73,19 @@ public class Equipe {
         this.score += score;
     }
 
-   
+   @Override
+protected PreparedStatement saveSansId(Connection con) throws SQLException {
+    String sql = "INSERT INTO Equipe (match_id, nom, score) VALUES (?, ?, ?)";
+    PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+    ps.setInt(1, this.matchId);
+    ps.setString(2, String.valueOf(this.nom)); // ou directement this.nom si tu passes nom en String
+    ps.setInt(3, this.score);
+
+    // NE PAS exécuter ici, on retourne juste le Statement
+    return ps;
+}
+
     
     @Override
     public String toString() {

@@ -23,8 +23,13 @@ package fr.insa.toto.model;
  * @author ThinkPad
  */
 import java.util.List;
+import fr.insa.beuvron.utils.database.ClasseMiroir;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 
-public class Match {
+public class Match extends ClasseMiroir {
 
     public enum Statut {
         EN_COURS,
@@ -90,7 +95,18 @@ public class Match {
             j.ajouterScore(scoreEquipe2);
         }
     }
+@Override
+    protected PreparedStatement saveSansId(Connection con) throws SQLException {
+        String sql = "INSERT INTO Matchs (ronde_id, score_e1, score_e2, statut) VALUES (?, ?, ?, ?)";
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
+        ps.setInt(1, ronde.getId());            
+        ps.setInt(2, this.scoreEquipe1);
+        ps.setInt(3, this.scoreEquipe2);
+        ps.setString(4, this.statut.name());
+
+        return ps;
+    }
     @Override
     public String toString() {
         return "Match : E1=" + equipe1.size() + " joueurs, score=" + scoreEquipe1 +

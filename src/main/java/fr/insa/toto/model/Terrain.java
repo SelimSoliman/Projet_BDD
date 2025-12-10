@@ -22,7 +22,13 @@ package fr.insa.toto.model;
  *
  * @author win
  */
-public class Terrain {
+import fr.insa.beuvron.utils.database.ClasseMiroir;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+public class Terrain extends ClasseMiroir {
   
     private int id;
     private String nom;
@@ -83,6 +89,17 @@ public class Terrain {
     
     public void basculerDisponibilite() {
         this.disponible = !this.disponible;
+    }
+    
+     @Override
+    protected PreparedStatement saveSansId(Connection con) throws SQLException {
+        String sql = "INSERT INTO Terrain (nom, disponible) VALUES (?, ?)";
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+        ps.setString(1, this.nom);
+        ps.setBoolean(2, this.disponible);
+
+        return ps;
     }
     
     @Override

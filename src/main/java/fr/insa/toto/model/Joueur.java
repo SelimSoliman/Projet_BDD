@@ -22,8 +22,13 @@ package fr.insa.toto.model;
  *
  * @author win
  */
-import java.time.LocalDate;
-public class Joueur {  
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import fr.insa.beuvron.utils.database.ClasseMiroir;
+
+public class Joueur extends ClasseMiroir{  
 
     private int id;                 
     private String nom;
@@ -40,7 +45,19 @@ public class Joueur {
         this.prenom = prenom;
     }
 
-    
+    @Override
+    protected PreparedStatement saveSansId(Connection con) throws SQLException {
+        String sql = "INSERT INTO Joueur (nom, prenom, surnom, sexe, age) VALUES (?, ?, ?, ?, ?)";
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+        ps.setString(1, this.nom);
+        ps.setString(2, this.prenom);
+        ps.setString(3, this.surnom);
+        ps.setString(4, this.sexe);
+        ps.setInt(5, this.age);
+
+        return ps;
+    }
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 

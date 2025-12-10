@@ -25,9 +25,13 @@ package fr.insa.toto.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import fr.insa.beuvron.utils.database.ClasseMiroir;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 
-
-public class Tournoi {
+public class Tournoi extends ClasseMiroir{
 
     private String nom;
     private int nbTerrains;
@@ -41,7 +45,17 @@ public class Tournoi {
         this.nbTerrains = nbTerrains;
         this.nbJoueursParEquipe = nbJoueursParEquipe;
     }
+@Override
+    protected PreparedStatement saveSansId(Connection con) throws SQLException {
+        String sql = "INSERT INTO Tournoi (nom, nb_terrains, nb_joueurs_par_equipe) VALUES (?, ?, ?)";
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
+        ps.setString(1, this.nom);
+        ps.setInt(2, this.nbTerrains);
+        ps.setInt(3, this.nbJoueursParEquipe);
+
+        return ps;
+    }
     public void ajouterJoueur(Joueur j) {
         joueurs.add(j);
     }

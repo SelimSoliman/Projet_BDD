@@ -26,8 +26,14 @@ package fr.insa.toto.model;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import fr.insa.beuvron.utils.database.ClasseMiroir;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import fr.insa.toto.model.Match;
 
-public class Ronde {
+public class Ronde extends ClasseMiroir{
 
     private int numero;                       
     private LocalDateTime debut;
@@ -47,6 +53,18 @@ public class Ronde {
 
     public void ajoutermatch(Match m) {
         this.matchs.add(m);
+    }
+    @Override
+    protected PreparedStatement saveSansId(Connection con) throws SQLException {
+        String sql = "INSERT INTO Ronde (numero, debut, close) VALUES (?, ?, ?)";
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+        ps.setInt(1, this.numero);
+        ps.setTimestamp(2, java.sql.Timestamp.valueOf(this.debut));
+        ps.setBoolean(3, this.close);
+        
+
+        return ps;
     }
 }
 

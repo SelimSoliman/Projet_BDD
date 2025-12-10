@@ -85,6 +85,53 @@ public class GestionBDD {
                 );
 
                 con.commit();
+                
+
+            st.executeUpdate("create table Terrain ( "
+                    + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
+                    + " nom varchar(100) not null unique,"
+                    + " disponible boolean not null"
+                    + ")"
+            );
+
+           
+
+           
+            st.executeUpdate("create table Ronde ( "
+                    + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
+                    + " numero integer not null,"
+                    + " debut timestamp not null,"
+                    + " close boolean not null"
+                    + ")"
+            );
+
+            
+            st.executeUpdate("create table Matchs ( "
+                    + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
+                    + " ronde_id integer not null,"
+                    + " score_e1 integer not null,"
+                    + " score_e2 integer not null,"
+                    + " statut varchar(20) not null"
+                    + ")"
+            );
+
+              st.executeUpdate("alter table Matchs\n"
+                        + "  add constraint fk_match_ronde\n"
+                        + "  foreign key (ronde_id) references Ronde(id)"
+                );
+
+                st.executeUpdate("alter table Match_Joueur\n"
+                        + "  add constraint fk_mj_match\n"
+                        + "  foreign key (match_id) references Matchs(id)"
+                );
+
+                st.executeUpdate("alter table Match_Joueur\n"
+                        + "  add constraint fk_mj_joueur\n"
+                        + "  foreign key (joueur_id) references Joueur(id)"
+                );
+
+                con.commit();
+            
             }
         } catch (SQLException ex) {
             con.rollback();
@@ -141,6 +188,30 @@ public class GestionBDD {
                 st.executeUpdate("drop table utilisateur");
             } catch (SQLException ex) {
             }
+            try {
+            st.executeUpdate(
+                    "alter table Matchs "
+                    + "drop constraint fk_match_ronde");
+        } catch (SQLException ex) {
+            // on ignore si la contrainte n'existe pas
+        }
+
+        // Ensuite supprimer les tables dans l'ordre dépendance -> parent
+        try {
+            st.executeUpdate("drop table Matchs");
+        } catch (SQLException ex) {
+        }
+
+        try {
+            st.executeUpdate("drop table Ronde");
+        } catch (SQLException ex) {
+        }
+
+        try {
+            st.executeUpdate("drop table Terrain");
+        } catch (SQLException ex) {
+        }
+    
         }
     }
 
