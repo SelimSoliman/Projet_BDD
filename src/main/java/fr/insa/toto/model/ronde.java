@@ -29,10 +29,10 @@ import java.util.List;
 
 public class Ronde {
 
-    private int numero;                       // 1st Ronde, 2nd, etc.
+    private int numero;                       
     private LocalDateTime debut;
-    private boolean close = false;            // statut
-    private List<match> matchs = new ArrayList<>();
+    private boolean close = false;            
+    private List<Match> matchs = new ArrayList<>();
 
     public Ronde(int numero) {
         this.numero = numero;
@@ -43,9 +43,9 @@ public class Ronde {
     public boolean isClose() { return close; }
     public void clore() { this.close = true; }
 
-    public List<match> getmatchs() { return matchs; }
+    public List<Match> getmatchs() { return matchs; }
 
-    public void ajoutermatch(match m) {
+    public void ajoutermatch(Match m) {
         this.matchs.add(m);
     }
 }

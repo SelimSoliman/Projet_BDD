@@ -22,6 +22,6 @@ package fr.insa.toto.model;
  *
  * @author ThinkPad
  */
-class match {
+class Match {
     
 }

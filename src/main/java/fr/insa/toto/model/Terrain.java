@@ -28,19 +28,13 @@ public class Terrain {
     private String nom;
     private boolean disponible;
     
-    // Constructeur sans paramètres
-    public Terrain() {
-        this.disponible = true;
-    }
-    
-    // Constructeur avec paramètres
     public Terrain(int id, String nom) {
         this.id = id;
         this.nom = nom;
         this.disponible = true;
     }
     
-    // Getters
+    
     public int getId() {
         return id;
     }
