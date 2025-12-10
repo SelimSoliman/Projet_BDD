@@ -8,9 +8,10 @@ public class Equipe {
     
     private int id;
     private int matchId;
-    private int numeroEquipe;  
+    private int nom;  
     private int score;
-    private List<Joueur> joueurs;  // ✅ La liste (plural)
+    private List<Joueur> joueurs; 
+    
     
     public Equipe() {
         this.joueurs = new ArrayList<>();
@@ -18,20 +19,20 @@ public class Equipe {
     }
     
     public int getTailleActuelle() {
-        return joueurs.size();  // ✅ joueurs
+        return joueurs.size();  
     }
     
     public boolean estComplete() {
-        return joueurs.size() == TAILLE_REQUISE;  // ✅ joueurs
+        return joueurs.size() == TAILLE_REQUISE;  
     }
     
     public boolean estValide() {
-        return joueurs.size() == TAILLE_REQUISE;  // ✅ joueurs
+        return joueurs.size() == TAILLE_REQUISE;  
     }
     
-    // ✅ MÉTHODE CORRIGÉE
+    
     public void ajouterJoueur(Joueur joueur) {
-        if (joueurs.size() >= TAILLE_REQUISE) {  // ✅ joueurs
+        if (joueurs.size() >= TAILLE_REQUISE) {  
             throw new IllegalStateException(
                 "Impossible d'ajouter un joueur. L'équipe est déjà complète avec " 
                 + TAILLE_REQUISE + " joueurs."
@@ -42,15 +43,15 @@ public class Equipe {
             throw new IllegalArgumentException("Le joueur ne peut pas être null");
         }
         
-        if (joueurs.contains(joueur)) {  // ✅ joueurs
+        if (joueurs.contains(joueur)) {  
             throw new IllegalArgumentException("Ce joueur est déjà dans l'équipe");
         }
         
-        joueurs.add(joueur);  // ✅ joueurs
+        joueurs.add(joueur);  
     }
     
     public void retirerJoueur(Joueur joueur) {
-        if (joueurs.remove(joueur)) {  // ✅ joueurs
+        if (joueurs.remove(joueur)) {  
             System.out.println("Joueur retiré de l'équipe");
         } else {
             throw new IllegalArgumentException("Ce joueur n'est pas dans l'équipe");
@@ -58,13 +59,19 @@ public class Equipe {
     }
     
     public List<Joueur> getJoueurs() {
-        return new ArrayList<>(joueurs);  // ✅ joueurs
+        return new ArrayList<>(joueurs);  
     }
     
-    // ... reste des getters/setters
+    public int getScoreTotal() { return score; }
+
+    public void ajouterScore(int score) {
+        this.score += score;
+    }
+
+   
     
     @Override
     public String toString() {
-        return "Équipe " + numeroEquipe + " (" + getTailleActuelle() + "/" + TAILLE_REQUISE + " joueurs) - Score: " + score;
+        return "Équipe " + nom + " (" + getTailleActuelle() + "/" + TAILLE_REQUISE + " joueurs) - Score: " + score;
     }
 }
