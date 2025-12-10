@@ -7,6 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import fr.insa.toto.model.GestionBDD;
 import fr.insa.toto.model.BdDTest;
+import java.sql.Connection;
+import java.sql.SQLException;
+import fr.insa.beuvron.utils.database.ConnectionPool;
+
 
 @SpringBootApplication
 @Theme("default")

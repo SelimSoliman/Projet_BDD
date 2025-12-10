@@ -30,11 +30,11 @@ import com.vaadin.flow.router.Route;
  * @author francois
  */
 @Route(value = "")
-@PageTitle("Likes")
+@PageTitle("Teqball")
 public class VuePrincipale extends VerticalLayout {
 
     public VuePrincipale() {
-        this.add(new H2("TODO"));
+        this.add(new H2("Bienvenue au site officiel du Tournoi Teqball"));
     }
 
 }
