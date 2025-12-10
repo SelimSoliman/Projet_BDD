@@ -77,7 +77,7 @@ public class Joueur extends ClasseMiroir{
     public void setAge(int age) { this.age = age; }
 
     void ajouterScore(int scoreEquipe2) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet."); 
     }
 
     
