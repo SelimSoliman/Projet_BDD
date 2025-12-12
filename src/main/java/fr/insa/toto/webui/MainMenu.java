@@ -18,27 +18,14 @@ along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
  */
 package fr.insa.toto.webui;
 
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.Paragraph;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.Route;
-import fr.insa.toto.webui.utilisateurs.CreationAdmin;
+import com.vaadin.flow.component.sidenav.SideNav;
 
 /**
  *
- * @author francois
+ * @author ThinkPad
  */
-@Route(value = "",layout=MainLayout.class)
-@PageTitle("Teqball")
-public class VuePrincipale extends VerticalLayout {
-
-    public VuePrincipale() {
-        this.add(new H2("Bienvenue au site officiel du tournoi de Teqball"));
-        this.add(new Paragraph ("une superbe application"));
-        
-        
-      
-    }
-
+Public class MainMenu extends SideNav{
+    Public MainMenu();
+    SideNavItem accueil= new SideNavItem()
 }
+
