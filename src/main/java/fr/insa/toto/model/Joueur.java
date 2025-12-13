@@ -47,7 +47,7 @@ public class Joueur extends ClasseMiroir{
 
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
-        String sql = "INSERT INTO Joueur (nom, prenom, surnom, sexe, age) VALUES (?, ?, ?, ?, ?)";
+        String sql = "insert into joueur (nom, prenom, surnom, sexe, age) VALUES (?, ?, ?, ?, ?)";
         PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
         ps.setString(1, this.nom);
