@@ -24,8 +24,8 @@ import com.vaadin.flow.component.sidenav.SideNav;
  *
  * @author ThinkPad
  */
-Public class MainMenu extends SideNav{
-    Public MainMenu();
+public class MainMenu extends SideNav{
+    public MainMenu(){
     SideNavItem accueil= new SideNavItem()
 }
-
+}
