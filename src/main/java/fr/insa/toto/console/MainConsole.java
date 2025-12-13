@@ -1,11 +1,4 @@
-
- 
 package fr.insa.toto.console;
-
-/**
- *
- * @author win
- */
 
 import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
 import fr.insa.toto.model.*;
@@ -13,53 +6,103 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Scanner;
 
-
 public class MainConsole {
 
     private Connection con;
     private Scanner in;
     private Tournoi tournoiCourant;
+    private Utilisateur utilisateurCourant;
+
+    // ================== CONSTRUCTEUR ==================
 
     public MainConsole() throws SQLException {
         this.con = ConnectionSimpleSGBD.defaultCon();
         this.in = new Scanner(System.in);
     }
 
+    // ================== MAIN ==================
+
     public static void main(String[] args) {
         try {
             MainConsole app = new MainConsole();
-            app.menuPrincipal();
+            app.login();          // identification + rôle
+            app.menuPrincipal();  // menus selon le rôle
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
+    // ================== AUTHENTIFICATION ==================
+
+    private void login() throws SQLException {
+        while (true) {
+            System.out.println("=== Connexion ===");
+            System.out.print("Surnom : ");
+            String surnom = in.nextLine();
+            System.out.print("Mot de passe : ");
+            String pass = in.nextLine();
+
+            var opt = Utilisateur.findBySurnomPass(con, surnom, pass);
+            if (opt.isPresent()) {
+                utilisateurCourant = opt.get();
+                System.out.println("Connecté en tant que " + surnom +
+                        " (rôle = " + (estAdmin() ? "admin" : "utilisateur") + ")");
+                break;
+            } else {
+                System.out.println("Identifiants incorrects, recommencez.\n");
+            }
+        }
+    }
+
+    private boolean estAdmin() {
+        return utilisateurCourant != null && utilisateurCourant.getRole() == 1;
+    }
+
+    private void ifAdmin(Runnable action) {
+        if (!estAdmin()) {
+            System.out.println("Fonctionnalité réservée à un administrateur.");
+            return;
+        }
+        action.run();
+    }
+
+    // ================== MENU PRINCIPAL ==================
+
     private void menuPrincipal() {
         int choix = -1;
         while (choix != 0) {
-            System.out.println("=== Gestion de tournoi (console) ===");
-            System.out.println("1. Créer le schéma BD (raz)");
-            System.out.println("2. Créer un tournoi");
-            System.out.println("3. Gérer les joueurs");
-            System.out.println("4. Gérer les rondes / matchs");
-            System.out.println("5. Gérer les terrains");
+            System.out.println("\n=== Gestion de tournoi (console) ===");
+            if (estAdmin()) {
+                System.out.println("1. Réinitialiser la base (raz)");
+                System.out.println("2. Définir les paramètres du tournoi");
+                System.out.println("3. Gérer les joueurs");
+                System.out.println("4. Gérer les rondes / matchs");
+                System.out.println("5. Gérer les terrains");
+            }
+            System.out.println("6. Consulter les informations du tournoi");
             System.out.println("0. Quitter");
             System.out.print("Votre choix : ");
-            choix = Integer.parseInt(in.nextLine());
+
+            try {
+                choix = Integer.parseInt(in.nextLine());
+            } catch (NumberFormatException ex) {
+                choix = -1;
+            }
 
             switch (choix) {
-                case 1 -> razBdd();
-                case 2 -> creerTournoi();
-                case 3 -> menuJoueurs();
-                case 4 -> menuRondesMatchs();
-                case 5 -> menuTerrains();
+                case 1 -> ifAdmin(this::razBdd);
+                case 2 -> ifAdmin(this::creerTournoiFixe);
+                case 3 -> ifAdmin(this::menuJoueurs);
+                case 4 -> ifAdmin(this::menuRondesMatchs);
+                case 5 -> ifAdmin(this::menuTerrains);
+                case 6 -> afficherInfosTournoi();
                 case 0 -> System.out.println("Au revoir.");
                 default -> System.out.println("Choix invalide");
             }
         }
     }
 
-    // ---------- BD / schéma ----------
+    // ================== BD / SCHEMA ==================
 
     private void razBdd() {
         try {
@@ -70,11 +113,11 @@ public class MainConsole {
         }
     }
 
-    // ---------- Tournoi ----------
+    // ================== TOURNOI UNIQUE ==================
 
-    private void creerTournoi() {
-        System.out.print("Nom du tournoi : ");
-        String nom = in.nextLine();
+    private void creerTournoiFixe() {
+        // Nom fixé : un seul tournoi
+        String nom = "Tournoi principal";
         System.out.print("Nombre de terrains : ");
         int nbTerrains = Integer.parseInt(in.nextLine());
         System.out.print("Nombre de joueurs par équipe : ");
@@ -83,28 +126,33 @@ public class MainConsole {
         this.tournoiCourant = new Tournoi(nom, nbTerrains, nbJoueursParEquipe);
         try {
             tournoiCourant.saveInDB(con);
-            System.out.println("Tournoi créé et sauvegardé.");
+            System.out.println("Tournoi '" + nom + "' créé et sauvegardé.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // ---------- Joueurs ----------
+    // ================== JOUEURS (ADMIN) ==================
 
     private void menuJoueurs() {
         int choix = -1;
         while (choix != 0) {
-            System.out.println("=== Joueurs ===");
+            System.out.println("\n=== Joueurs (admin) ===");
             System.out.println("1. Ajouter un joueur");
             System.out.println("2. Lister les joueurs du tournoi courant");
+            // plus tard : 3. Modifier, 4. Supprimer
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
-            choix = Integer.parseInt(in.nextLine());
+            try {
+                choix = Integer.parseInt(in.nextLine());
+            } catch (NumberFormatException ex) {
+                choix = -1;
+            }
 
             switch (choix) {
                 case 1 -> ajouterJoueurConsole();
                 case 2 -> listerJoueursTournoi();
-                case 0 -> {}
+                case 0 -> { }
                 default -> System.out.println("Choix invalide");
             }
         }
@@ -112,7 +160,7 @@ public class MainConsole {
 
     private void ajouterJoueurConsole() {
         if (tournoiCourant == null) {
-            System.out.println("Créez d'abord un tournoi.");
+            System.out.println("Créez d'abord le tournoi (option 2).");
             return;
         }
         System.out.print("Nom : ");
@@ -151,64 +199,70 @@ public class MainConsole {
         }
     }
 
-    // ---------- Rondes / matchs ----------
+    // ================== RONDES / MATCHS (ADMIN) ==================
 
     private void menuRondesMatchs() {
         if (tournoiCourant == null) {
-            System.out.println("Créez d'abord un tournoi.");
+            System.out.println("Créez d'abord le tournoi.");
             return;
         }
         int choix = -1;
         while (choix != 0) {
-            System.out.println("=== Rondes / Matchs ===");
+            System.out.println("\n=== Rondes / Matchs (admin) ===");
             System.out.println("1. Créer une nouvelle ronde");
-            System.out.println("2. Saisir le résultat d'un match");
+            System.out.println("2. Saisir le résultat d'un match (à compléter)");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
-            choix = Integer.parseInt(in.nextLine());
+            try {
+                choix = Integer.parseInt(in.nextLine());
+            } catch (NumberFormatException ex) {
+                choix = -1;
+            }
 
             switch (choix) {
                 case 1 -> creerRondeSimple();
-                case 2 -> saisirResultatMatch(); // à implémenter selon ta stratégie de stockage
-                case 0 -> {}
+                case 2 -> saisirResultatMatch();
+                case 0 -> { }
                 default -> System.out.println("Choix invalide");
             }
         }
     }
 
     private void creerRondeSimple() {
-        // Ronde numéro = taille+1
+        // Pour l’instant : crée juste une ronde vide
         Ronde r = tournoiCourant.nouvelleronde();
         try {
             r.saveInDB(con);
+            System.out.println("Ronde " + r.getNumero() + " créée.");
+            // TODO : créer les matchs de la ronde, répartir les joueurs aléatoirement
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
-        // Ici tu devras répartir les joueurs de tournoiCourant en équipes / matchs
-        // Pour l'instant : on ne fait qu'afficher qu’une ronde est créée
-        System.out.println("Ronde " + r.getNumero() + " créée.");
     }
 
     private void saisirResultatMatch() {
-        // À faire : retrouver un match par id, lire scores, appeler definirScores(score1, score2), puis saveInDB(con)
-        System.out.println("Saisie de résultat de match à implémenter selon ta logique d'accès BD.");
+        // À implémenter plus tard : sélection d’un match, saisie des scores, appel à definirScores(...)
+        System.out.println("Saisie de résultat de match : à implémenter.");
     }
 
-    // ---------- Terrains ----------
+    // ================== TERRAINS (ADMIN) ==================
 
     private void menuTerrains() {
         int choix = -1;
         while (choix != 0) {
-            System.out.println("=== Terrains ===");
+            System.out.println("\n=== Terrains (admin) ===");
             System.out.println("1. Créer un terrain");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
-            choix = Integer.parseInt(in.nextLine());
+            try {
+                choix = Integer.parseInt(in.nextLine());
+            } catch (NumberFormatException ex) {
+                choix = -1;
+            }
 
             switch (choix) {
                 case 1 -> creerTerrain();
-                case 0 -> {}
+                case 0 -> { }
                 default -> System.out.println("Choix invalide");
             }
         }
@@ -225,5 +279,18 @@ public class MainConsole {
             e.printStackTrace();
         }
     }
-}
 
+    // ================== CONSULTATION (ADMIN + UTILISATEUR) ==================
+
+    private void afficherInfosTournoi() {
+        if (tournoiCourant == null) {
+            System.out.println("Aucun tournoi courant (créez-le côté admin).");
+            return;
+        }
+        System.out.println("\n=== Informations sur le tournoi ===");
+        System.out.println("Nom : " + tournoiCourant.getNom());
+        System.out.println("Nombre de joueurs : " + tournoiCourant.getJoueurs().size());
+        System.out.println("Nombre de rondes : " + tournoiCourant.getRondes().size());
+        // TODO : afficher classement joueurs, liste des rondes avec statut, etc.
+    }
+}

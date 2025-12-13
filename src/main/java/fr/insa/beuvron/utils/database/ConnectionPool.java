@@ -46,7 +46,7 @@ public class ConnectionPool {
         // peut être pas indispensable, mais dans le doute...
         config.setUsername("inutilePourH2Mem");
         config.setPassword("inutilePourH2Mem");
-        config.setMaximumPoolSize(10);
+        config.setMaximumPoolSize(2);
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "250");
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
