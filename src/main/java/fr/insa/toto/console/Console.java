@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-public class Console {
+public class Console  {
 
     private Connection con;
     private Scanner in;
