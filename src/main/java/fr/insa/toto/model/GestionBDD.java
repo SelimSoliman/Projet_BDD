@@ -22,6 +22,7 @@ import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 /**
  *
@@ -257,12 +258,7 @@ public static void creeSchema(Connection con) throws SQLException {
             throw new Error(ex);
         }
     }
-List<Utilisateur> users = List.of(
-            new Utilisateur("admin", "1234", 1),   // admin
-            new Utilisateur("alice", "1111", 2),   // utilisateur simple
-            new Utilisateur("bob",   "2222", 2)    // utilisateur simple
-    );
-    for (var u : users) {
-        u.saveInDB(con);
+    // for (var u : User) {
+    // u.saveInDB(con);
     }
-}
+
