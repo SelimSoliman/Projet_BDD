@@ -19,13 +19,20 @@ along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
 package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.sidenav.SideNav;
+import com.vaadin.flow.component.sidenav.SideNavItem;
+import fr.insa.toto.webui.utilisateurs.CreationAdmin;
 
 /**
  *
  * @author ThinkPad
  */
 public class MainMenu extends SideNav{
-    public MainMenu(){
-    SideNavItem accueil= new SideNavItem()
-}
-}
+    public MainMenu() {
+    SideNavItem accueil = new SideNavItem("accueil", VuePrincipale.class);
+    SideNavItem utilisateurs = new SideNavItem("utilisateurs");
+    SideNavItem creationAdmin = new SideNavItem("creation(admin)", CreationAdmin.class);
+
+    utilisateurs.addItem(creationAdmin);
+    this.addItem(accueil, utilisateurs);
+}}
+

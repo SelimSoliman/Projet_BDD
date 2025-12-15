@@ -20,8 +20,9 @@ package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.html.H2;
+import fr.insa.toto.webui.session.LoginEntete;
+import fr.insa.toto.webui.session.SessionInfo;
+import fr.insa.toto.webui.session.LogoutEntete;
 
 /**
  *
@@ -30,13 +31,19 @@ import com.vaadin.flow.component.html.H2;
 public class MainLayout extends AppLayout {
     
     public MainLayout(){
-        this.addToDrawer(new Button("coucou"));
+        this.addToDrawer(new MainMenu());
         DrawerToggle toggle= new DrawerToggle();
-        this.addToNavbar(toggle,new H2("ceci est l’entête"));}
+        this.addToNavbar(toggle);
+        if (SessionInfo.userConnected()){
+            this.addToNavbar(new LogoutEntete());
+           } else {
+            this.addToNavbar(new LoginEntete());
+        }
+    
 
   
     
 
     
-    
+}    
 }
