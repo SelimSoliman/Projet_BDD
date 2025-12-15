@@ -18,11 +18,10 @@ along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
  */
 package fr.insa.toto.model;
 
-import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
+//import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
 
 /**
  *
@@ -53,7 +52,13 @@ public static void creeSchema(Connection con) throws SQLException {
                     + " nom varchar(20) not null unique,"
                     + " description text not null"
                     + ")");
-
+            st.executeUpdate("create table Equipe ( "
+                        + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
+                        + " match_id integer not null,"
+                        + " numero integer not null,"
+                        + " score integer not null"
+                        + ")");
+            
             st.executeUpdate("create table pratique ( "
                     + " idutilisateur integer not null,"
                     + " idloisir integer not null,"
@@ -133,7 +138,9 @@ public static void creeSchema(Connection con) throws SQLException {
             st.executeUpdate("alter table Match_Joueur "
                     + " add constraint fk_mj_joueur "
                     + " foreign key (joueur_id) references Joueur(id)");
-
+            st.executeUpdate("alter table Equipe "
+                        + " add constraint fk_equipe_match "
+                        + " foreign key (match_id) references Matchs(id)");
             // tout s'est bien passé
             con.commit();
         }
@@ -194,6 +201,12 @@ public static void creeSchema(Connection con) throws SQLException {
             } catch (SQLException ex) {
             }
             try {
+                st.executeUpdate(
+                        "alter table Equipe "
+                        + "drop constraint fk_equipe_match");
+            } catch (SQLException ex) {
+            }
+            try {
             st.executeUpdate(
                     "alter table Matchs "
                     + "drop constraint fk_match_ronde");
@@ -206,7 +219,10 @@ public static void creeSchema(Connection con) throws SQLException {
             st.executeUpdate("drop table Matchs");
         } catch (SQLException ex) {
         }
-
+        try {
+                st.executeUpdate("drop table Equipe");
+            } catch (SQLException ex) {
+            }
         try {
             st.executeUpdate("drop table Ronde");
         } catch (SQLException ex) {
@@ -230,6 +246,7 @@ public static void creeSchema(Connection con) throws SQLException {
 
         // tables avec dépendances d'abord
         st.executeUpdate("DROP TABLE IF EXISTS Match_Joueur");
+        st.executeUpdate("DROP TABLE IF EXISTS Equipe");
         st.executeUpdate("DROP TABLE IF EXISTS Matchs");
         st.executeUpdate("DROP TABLE IF EXISTS Ronde");
         st.executeUpdate("DROP TABLE IF EXISTS Terrain");
