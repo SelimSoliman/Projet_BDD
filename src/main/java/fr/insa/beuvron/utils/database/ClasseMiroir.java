@@ -18,6 +18,7 @@ along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
  */
 package fr.insa.beuvron.utils.database;
 
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -63,7 +64,8 @@ import java.sql.Statement;
  *
  * @author francois
  */
-public abstract class ClasseMiroir {
+public abstract class ClasseMiroir implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private int id;
 
