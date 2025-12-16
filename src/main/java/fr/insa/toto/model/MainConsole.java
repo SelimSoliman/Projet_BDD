@@ -121,7 +121,7 @@ public class MainConsole {
         System.out.print("Nombre de joueurs par équipe : ");
         int nbJoueursParEquipe = Integer.parseInt(in.nextLine());
 
-        this.tournoiCourant = new Tournoi(nom, nbTerrains, nbJoueursParEquipe);
+        this.tournoiCourant = new Tournoi(nom, nbTerrains);
         try {
             tournoiCourant.saveInDB(con);
             System.out.println("Tournoi '" + nom + "' créé et sauvegardé.");

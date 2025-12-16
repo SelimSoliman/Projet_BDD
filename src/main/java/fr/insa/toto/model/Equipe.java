@@ -9,15 +9,15 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class Equipe extends ClasseMiroir {
-   
-    private static final int TAILLE_REQUISE = 2;  
-    
+
+    private static final int TAILLE_REQUISE = 2;
+
     private int id;
     private Match match;
     private int numero;   // 1 ou 2
     private int score;
-    private List<Joueur> joueurs; 
-    
+    private List<Joueur> joueurs;
+
     public Equipe(Match match, int numero) {
         this.match = match;
         this.numero = numero;
@@ -32,21 +32,21 @@ public class Equipe extends ClasseMiroir {
     public int getNumero() { return numero; }
 
     public int getTailleActuelle() {
-        return joueurs.size();  
+        return joueurs.size();
     }
-    
+
     public boolean estComplete() {
-        return joueurs.size() == TAILLE_REQUISE;  
+        return joueurs.size() == TAILLE_REQUISE;
     }
-    
+
     public boolean estValide() {
-        return joueurs.size() == TAILLE_REQUISE;  
+        return joueurs.size() == TAILLE_REQUISE;
     }
-    
+
     public void ajouterJoueur(Joueur joueur) {
         if (joueurs.size() >= TAILLE_REQUISE) {
             throw new IllegalStateException(
-                "Impossible d'ajouter un joueur. L'équipe est déjà complète avec " 
+                "Impossible d'ajouter un joueur. L'équipe est déjà complète avec "
                 + TAILLE_REQUISE + " joueurs."
             );
         }
@@ -56,19 +56,19 @@ public class Equipe extends ClasseMiroir {
         if (joueurs.contains(joueur)) {
             throw new IllegalArgumentException("Ce joueur est déjà dans l'équipe");
         }
-        joueurs.add(joueur);  
+        joueurs.add(joueur);
     }
-    
+
     public void retirerJoueur(Joueur joueur) {
         if (!joueurs.remove(joueur)) {
             throw new IllegalArgumentException("Ce joueur n'est pas dans l'équipe");
         }
     }
-    
+
     public List<Joueur> getJoueurs() {
-        return new ArrayList<>(joueurs);  
+        return new ArrayList<>(joueurs);
     }
-    
+
     public int getScoreTotal() { return score; }
 
     public void ajouterScore(int score) {
