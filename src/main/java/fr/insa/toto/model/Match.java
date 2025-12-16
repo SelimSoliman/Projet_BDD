@@ -60,13 +60,6 @@ public class Match extends ClasseMiroir {
     private void cloreMatch() {
         this.statut = Statut.CLOS;
 
-        // Chaque joueur de l'équipe reçoit le même score
-        for (Joueur j : equipe1.getJoueurs()) {
-            j.ajouterScore(equipe1.getScoreTotal());
-        }
-        for (Joueur j : equipe2.getJoueurs()) {
-            j.ajouterScore(equipe2.getScoreTotal());
-        }
     }
 
     @Override
