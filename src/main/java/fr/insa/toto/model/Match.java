@@ -1,28 +1,5 @@
-/*
-Copyright 2000- Francois de Bertrand de Beuvron
-
-This file is part of CoursBeuvron.
-
-CoursBeuvron is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CoursBeuvron is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
- */
 package fr.insa.toto.model;
 
-/**
- *
- * @author ThinkPad
- */
-import java.util.List;
 import fr.insa.beuvron.utils.database.ClasseMiroir;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -36,39 +13,36 @@ public class Match extends ClasseMiroir {
         CLOS
     }
 
-    private int id;                    // Identifiant BD éventuel
-    private Ronde ronde;               // Ronde à laquelle appartient ce match
+    private int id;            // Identifiant BD
+    private Ronde ronde;       // Ronde à laquelle appartient ce match
 
-    private List<Joueur> equipe1;      // Liste des joueurs de l'équipe 1
-    private List<Joueur> equipe2;      // Liste des joueurs de l'équipe 2
-
-    private int scoreEquipe1 = 0;
-    private int scoreEquipe2 = 0;
+    private Equipe equipe1;
+    private Equipe equipe2;
 
     private Statut statut = Statut.EN_COURS;
 
-    public Match(int id, Ronde ronde, List<Joueur> equipe1, List<Joueur> equipe2) {
+    public Match(int id, Ronde ronde) {
         this.id = id;
         this.ronde = ronde;
-        this.equipe1 = equipe1;
-        this.equipe2 = equipe2;
+        this.equipe1 = new Equipe(this, 1);
+        this.equipe2 = new Equipe(this, 2);
     }
 
-    // ---------------- GETTERS / SETTERS ----------------
+    // ---------------- GETTERS ----------------
 
     public int getId() { return id; }
 
-    public List<Joueur> getEquipe1() { return equipe1; }
+    public Ronde getRonde() { return ronde; }
 
-    public List<Joueur> getEquipe2() { return equipe2; }
+    public Equipe getEquipe1() { return equipe1; }
 
-    public int getScoreEquipe1() { return scoreEquipe1; }
+    public Equipe getEquipe2() { return equipe2; }
 
-    public int getScoreEquipe2() { return scoreEquipe2; }
+    public int getScoreEquipe1() { return equipe1.getScoreTotal(); }
+
+    public int getScoreEquipe2() { return equipe2.getScoreTotal(); }
 
     public Statut getStatut() { return statut; }
-
-    public Ronde getRonde() { return ronde; }
 
     // ---------------- MÉTHODES PRINCIPALES ----------------
 
@@ -77,40 +51,41 @@ public class Match extends ClasseMiroir {
             throw new IllegalStateException("Match déjà clos");
         }
 
-        this.scoreEquipe1 = score1;
-        this.scoreEquipe2 = score2;
+        equipe1.ajouterScore(score1);
+        equipe2.ajouterScore(score2);
 
-        // Lorsqu'on définit les scores, on clot le match.
         cloreMatch();
     }
 
     private void cloreMatch() {
         this.statut = Statut.CLOS;
 
-        // Chaque joueur d’une équipe reçoit le même score
-        for (Joueur j : equipe1) {
-            j.ajouterScore(scoreEquipe1);
+        // Chaque joueur de l'équipe reçoit le même score
+        for (Joueur j : equipe1.getJoueurs()) {
+            j.ajouterScore(equipe1.getScoreTotal());
         }
-        for (Joueur j : equipe2) {
-            j.ajouterScore(scoreEquipe2);
+        for (Joueur j : equipe2.getJoueurs()) {
+            j.ajouterScore(equipe2.getScoreTotal());
         }
     }
-@Override
+
+    @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = "INSERT INTO Matchs (ronde_id, score_e1, score_e2, statut) VALUES (?, ?, ?, ?)";
         PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-        ps.setInt(1, ronde.getId());            
-        ps.setInt(2, this.scoreEquipe1);
-        ps.setInt(3, this.scoreEquipe2);
+        ps.setInt(1, ronde.getId());
+        ps.setInt(2, this.getScoreEquipe1());
+        ps.setInt(3, this.getScoreEquipe2());
         ps.setString(4, this.statut.name());
 
         return ps;
     }
+
     @Override
     public String toString() {
-        return "Match : E1=" + equipe1.size() + " joueurs, score=" + scoreEquipe1 +
-               " | E2=" + equipe2.size() + " joueurs, score=" + scoreEquipe2 +
+        return "Match : E1=" + equipe1.getTailleActuelle() + " joueurs, score=" + getScoreEquipe1() +
+               " | E2=" + equipe2.getTailleActuelle() + " joueurs, score=" + getScoreEquipe2() +
                " (" + statut + ")";
     }
 }
