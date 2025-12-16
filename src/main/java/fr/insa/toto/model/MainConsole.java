@@ -1,32 +1,8 @@
-/*
-Copyright 2000- Francois de Bertrand de Beuvron
-
-This file is part of CoursBeuvron.
-
-CoursBeuvron is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CoursBeuvron is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
- */
 package fr.insa.toto.model;
-
-/**
- *
- * @author win
- */
-
-
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Scanner;
 
 public class MainConsole {
@@ -139,7 +115,6 @@ public class MainConsole {
     // ================== TOURNOI UNIQUE ==================
 
     private void creerTournoiFixe() {
-        // Nom fixé : un seul tournoi
         String nom = "Tournoi principal";
         System.out.print("Nombre de terrains : ");
         int nbTerrains = Integer.parseInt(in.nextLine());
@@ -163,7 +138,6 @@ public class MainConsole {
             System.out.println("\n=== Joueurs (admin) ===");
             System.out.println("1. Ajouter un joueur");
             System.out.println("2. Lister les joueurs du tournoi courant");
-            // plus tard : 3. Modifier, 4. Supprimer
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -186,24 +160,23 @@ public class MainConsole {
             System.out.println("Créez d'abord le tournoi (option 2).");
             return;
         }
-        System.out.print("Nom : ");
-        String nom = in.nextLine();
-        System.out.print("Prénom : ");
-        String prenom = in.nextLine();
+
         System.out.print("Surnom : ");
         String surnom = in.nextLine();
-        System.out.print("Sexe : ");
-        String sexe = in.nextLine();
-        System.out.print("Âge : ");
-        int age = Integer.parseInt(in.nextLine());
+        System.out.print("Catégorie : ");
+        String categorie = in.nextLine();
+        System.out.print("Taille (en cm) : ");
+        int taillecm = Integer.parseInt(in.nextLine());
 
-        Joueur j = new Joueur(0, nom, prenom);
+        Joueur j = new Joueur(0, surnom, categorie, taillecm);
+
         j.setSurnom(surnom);
-        j.setSexe(sexe);
-        j.setAge(age);
+        j.setCategorie(categorie);
+        j.setTaillecm(taillecm);
 
         try {
             j.saveInDB(con);
+            // facultatif : garder aussi une copie en mémoire
             tournoiCourant.ajouterJoueur(j);
             System.out.println("Joueur ajouté.");
         } catch (SQLException e) {
@@ -217,8 +190,20 @@ public class MainConsole {
             return;
         }
         System.out.println("Joueurs du tournoi " + tournoiCourant.getNom() + " :");
-        for (Joueur j : tournoiCourant.getJoueurs()) {
-            System.out.println("- " + j.getId() + " " + j.getPrenom() + " " + j.getNom());
+        try {
+            List<Joueur> joueurs = Joueur.tousLesJoueurs(con);
+            if (joueurs.isEmpty()) {
+                System.out.println("(aucun joueur en base)");
+            } else {
+                for (Joueur j : joueurs) {
+                    System.out.println(" " + j.getId()
+                            + " | " + j.getSurnom()
+                            + " | " + j.getCategorie()
+                            + " | " + j.getTaillecm() + " cm");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -252,19 +237,16 @@ public class MainConsole {
     }
 
     private void creerRondeSimple() {
-        // Pour l’instant : crée juste une ronde vide
         Ronde r = tournoiCourant.nouvelleronde();
         try {
             r.saveInDB(con);
             System.out.println("Ronde " + r.getNumero() + " créée.");
-            // TODO : créer les matchs de la ronde, répartir les joueurs aléatoirement
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     private void saisirResultatMatch() {
-        // À implémenter plus tard : sélection d’un match, saisie des scores, appel à definirScores(...)
         System.out.println("Saisie de résultat de match : à implémenter.");
     }
 
@@ -314,7 +296,5 @@ public class MainConsole {
         System.out.println("Nom : " + tournoiCourant.getNom());
         System.out.println("Nombre de joueurs : " + tournoiCourant.getJoueurs().size());
         System.out.println("Nombre de rondes : " + tournoiCourant.getRondes().size());
-        // TODO : afficher classement joueurs, liste des rondes avec statut, etc.
     }
 }
-

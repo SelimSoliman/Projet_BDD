@@ -27,58 +27,77 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import fr.insa.beuvron.utils.database.ClasseMiroir;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Joueur extends ClasseMiroir{  
 
     private int id;                 
-    private String nom;
-    private String prenom;
     private String surnom;
-    private String sexe;            
-    private int age;
+    private String categorie;            
+    private int taillecm;
+
+    public Joueur(int id, String surnom, String categorie, int taillecm) {
+        this.id = id;
+        this.surnom = surnom;
+        this.categorie = categorie;
+        this.taillecm = taillecm;
+    }
+
+   
 
        
 
-    public Joueur(int id, String nom, String prenom) {
-        this.id = id;
-        this.nom = nom;
-        this.prenom = prenom;
-    }
-
     @Override
-    protected PreparedStatement saveSansId(Connection con) throws SQLException {
-        String sql = "insert into joueur (nom, prenom, surnom, sexe, age) VALUES (?, ?, ?, ?, ?)";
-        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+protected PreparedStatement saveSansId(Connection con) throws SQLException {
+    String sql = "insert into joueur (surnom, categorie, taillecm) values (?, ?, ?)";
+    PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+    ps.setString(1, this.surnom);
+    ps.setString(2, this.categorie);
+    ps.setInt(3, this.taillecm);
 
-        ps.setString(1, this.nom);
-        ps.setString(2, this.prenom);
-        ps.setString(3, this.surnom);
-        ps.setString(4, this.sexe);
-        ps.setInt(5, this.age);
+    return ps;
+}
 
-        return ps;
-    }
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
-    public String getNom() { return nom; }
-    public void setNom(String nom) { this.nom = nom; }
-
-    public String getPrenom() { return prenom; }
-    public void setPrenom(String prenom) { this.prenom = prenom; }
-
+   
     public String getSurnom() { return surnom; }
     public void setSurnom(String surnom) { this.surnom = surnom; }
 
-    public String getSexe() { return sexe; }
-    public void setSexe(String sexe) { this.sexe = sexe; }
-
-    public int getAge() { return age; }
-    public void setAge(int age) { this.age = age; }
-
-    void ajouterScore(int scoreEquipe2) {
-        throw new UnsupportedOperationException("Not supported yet."); 
+    public int getTaillecm() {
+        return taillecm;
     }
 
-    
+    public void setTaillecm(int taillecm) {
+        this.taillecm = taillecm;
+    }
+
+    public String getCategorie() {
+        return categorie;
+    }
+
+    public void setCategorie(String categorie) {
+        this.categorie = categorie;
+    }
+
+    public static List<Joueur> tousLesJoueurs(Connection con) throws SQLException {
+    List<Joueur> res = new ArrayList<>();
+    String sql = "select id, surnom, categorie, taillecm from joueur";
+    try (PreparedStatement ps = con.prepareStatement(sql);
+         ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+            Joueur j = new Joueur(
+                    rs.getInt("id"),
+                    rs.getString("surnom"),
+                    rs.getString("categorie"),
+                    rs.getInt("taillecm"));
+            res.add(j);
+        }
+    }
+    return res;
+}
+
 }

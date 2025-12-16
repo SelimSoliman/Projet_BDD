@@ -33,29 +33,37 @@ import java.sql.Statement;
 
 public class Tournoi extends ClasseMiroir{
 
+private static final int TAILLE_EQUIPE_FIXE = 2;
+
     private String nom;
     private int nbTerrains;
-    private int nbJoueursParEquipe;
+    private int nbJoueursParEquipe = TAILLE_EQUIPE_FIXE;
 
     private List<Joueur> joueurs = new ArrayList<>();
     private List<Ronde> rondes = new ArrayList<>();
 
-    public Tournoi(String nom, int nbTerrains, int nbJoueursParEquipe) {
+    public Tournoi(String nom, int nbTerrains) {
         this.nom = nom;
         this.nbTerrains = nbTerrains;
-        this.nbJoueursParEquipe = nbJoueursParEquipe;
+        this.nbJoueursParEquipe = TAILLE_EQUIPE_FIXE;
     }
-@Override
+
+    @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = "INSERT INTO Tournoi (nom, nb_terrains, nb_joueurs_par_equipe) VALUES (?, ?, ?)";
         PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
         ps.setString(1, this.nom);
         ps.setInt(2, this.nbTerrains);
-        ps.setInt(3, this.nbJoueursParEquipe);
+        ps.setInt(3, this.nbJoueursParEquipe);   // toujours 2
 
         return ps;
     }
+
+    public int getNbJoueursParEquipe() {
+        return nbJoueursParEquipe;
+    }
+
     public void ajouterJoueur(Joueur j) {
         joueurs.add(j);
     }
