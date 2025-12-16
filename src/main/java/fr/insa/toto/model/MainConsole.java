@@ -72,11 +72,11 @@ public class MainConsole {
         while (choix != 0) {
             System.out.println("\n=== Gestion de tournoi (console) ===");
             if (estAdmin()) {
-                System.out.println("1. Réinitialiser la base (raz)");
-                System.out.println("2. Définir les paramètres du tournoi");
-                System.out.println("3. Gérer les joueurs");
-                System.out.println("4. Gérer les rondes / matchs");
-                System.out.println("5. Gérer les terrains");
+                System.out.println("1. Reinitialiser la base (raz)");
+                System.out.println("2. Definir les paramètres du tournoi");
+                System.out.println("3. Gerer les joueurs");
+                System.out.println("4. Gerer les rondes / matchs");
+                System.out.println("5. Gerer les terrains");
             }
             System.out.println("6. Consulter les informations du tournoi");
             System.out.println("0. Quitter");
