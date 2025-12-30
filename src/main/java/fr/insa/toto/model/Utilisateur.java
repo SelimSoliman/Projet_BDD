@@ -195,6 +195,22 @@
         public void setRole(int role) {
             this.role = role;
         }
+public static List<Utilisateur> findAll(Connection con) throws SQLException {
+    List<Utilisateur> res = new ArrayList<>();
+    try (PreparedStatement pst = con.prepareStatement(
+            "select id, surnom, pass, role from UTILISATEUR")) {
+        try (ResultSet rs = pst.executeQuery()) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String surnom = rs.getString("surnom");
+                String pass = rs.getString("pass");
+                int role = rs.getInt("role");
+                res.add(new Utilisateur(id, surnom, pass, role));
+            }
+        }
+    }
+    return res;
+}
 
 
     }
