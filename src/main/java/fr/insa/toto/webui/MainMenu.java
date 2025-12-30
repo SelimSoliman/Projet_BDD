@@ -20,19 +20,33 @@ package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
+import fr.insa.toto.webui.session.SessionInfo;
 import fr.insa.toto.webui.utilisateurs.CreationAdmin;
+import fr.insa.toto.webui.utilisateurs.ListeUtilisateurs;
 
 /**
  *
  * @author ThinkPad
  */
-public class MainMenu extends SideNav{
-    public MainMenu() {
-    SideNavItem accueil = new SideNavItem("accueil", VuePrincipale.class);
-    SideNavItem utilisateurs = new SideNavItem("utilisateurs");
-    SideNavItem creationAdmin = new SideNavItem("creation(admin)", CreationAdmin.class);
+public class MainMenu extends SideNav {
 
-    utilisateurs.addItem(creationAdmin);
-    this.addItem(accueil, utilisateurs);
-}}
+    public MainMenu() {
+        SideNavItem accueil = new SideNavItem("accueil", VuePrincipale.class);
+
+        SideNavItem utilisateurs = new SideNavItem("utilisateurs");
+        SideNavItem listeUtilisateurs = new SideNavItem("liste", ListeUtilisateurs.class);
+
+        utilisateurs.addItem(listeUtilisateurs);
+
+        // ✅ visible seulement pour les admins
+        if (SessionInfo.adminConnected()) {
+            SideNavItem creationAdmin = new SideNavItem("creation(admin)", CreationAdmin.class);
+            utilisateurs.addItem(creationAdmin);
+        }
+
+        this.addItem(accueil, utilisateurs);
+    }
+}
+
+
 

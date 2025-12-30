@@ -20,6 +20,8 @@ package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import fr.insa.toto.webui.session.LoginEntete;
 import fr.insa.toto.webui.session.SessionInfo;
 import fr.insa.toto.webui.session.LogoutEntete;
@@ -28,22 +30,32 @@ import fr.insa.toto.webui.session.LogoutEntete;
  *
  * @author ThinkPad
  */
-public class MainLayout extends AppLayout {
-    
-    public MainLayout(){
+public class MainLayout extends AppLayout implements BeforeEnterObserver {
+
+    public MainLayout() {
         this.addToDrawer(new MainMenu());
-        DrawerToggle toggle= new DrawerToggle();
-        this.addToNavbar(toggle);
-        if (SessionInfo.userConnected()){
+        this.addToNavbar(new DrawerToggle());
+
+        // En navbar : uniquement le logout si connecté
+        if (SessionInfo.userConnected()) {
             this.addToNavbar(new LogoutEntete());
-           } else {
-            this.addToNavbar(new LoginEntete());
         }
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        boolean isLoginPage = event.getLocation().getPath().equals("login");
+
+        if (!SessionInfo.userConnected() && !isLoginPage) {
+            event.forwardTo("login");
+        }
+    }
+}
+
     
 
   
     
 
     
-}    
-}
+
