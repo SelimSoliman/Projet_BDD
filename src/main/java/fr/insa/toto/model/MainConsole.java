@@ -2,6 +2,7 @@ package fr.insa.toto.model;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Scanner;
 
@@ -24,8 +25,8 @@ public class MainConsole {
     public static void main(String[] args) {
         try {
             MainConsole app = new MainConsole();
-            app.login();          // identification + rôle
-            app.menuPrincipal();  // menus selon le rôle
+            app.login();          // identification + role
+            app.menuPrincipal();  // menus selon le role
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -45,7 +46,7 @@ public class MainConsole {
             if (opt.isPresent()) {
                 utilisateurCourant = opt.get();
                 System.out.println("Connecte en tant que " + surnom +
-                        " (rôle = " + (estAdmin() ? "admin" : "utilisateur") + ")");
+                        " (role = " + (estAdmin() ? "admin" : "utilisateur") + ")");
                 break;
             } else {
                 System.out.println("Identifiants incorrects, recommencez.\n");
@@ -59,7 +60,7 @@ public class MainConsole {
 
     private void ifAdmin(Runnable action) {
         if (!estAdmin()) {
-            System.out.println("Fonctionnalite reservee à un administrateur.");
+            System.out.println("Fonctionnalite reservee a un administrateur.");
             return;
         }
         action.run();
@@ -73,7 +74,7 @@ public class MainConsole {
             System.out.println("\n=== Gestion de tournoi (console) ===");
             if (estAdmin()) {
                 System.out.println("1. Reinitialiser la base (raz)");
-                System.out.println("2. Definir les paramètres du tournoi");
+                System.out.println("2. Definir les parametres du tournoi");
                 System.out.println("3. Gerer les joueurs");
                 System.out.println("4. Gerer les rondes / matchs");
                 System.out.println("5. Gerer les terrains");
@@ -106,6 +107,7 @@ public class MainConsole {
     private void razBdd() {
         try {
             GestionBDD.razBdd(con);
+            this.tournoiCourant = null;
             System.out.println("Base recreee.");
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -115,6 +117,10 @@ public class MainConsole {
     // ================== TOURNOI UNIQUE ==================
 
     private void creerTournoiFixe() {
+        if (tournoiCourant != null) {
+            System.out.println("Un tournoi existe deja.");
+            return;
+        }
         String nom = "Tournoi principal";
         System.out.print("Nombre de terrains : ");
         int nbTerrains = Integer.parseInt(in.nextLine());
@@ -163,20 +169,41 @@ public class MainConsole {
 
         System.out.print("Surnom : ");
         String surnom = in.nextLine();
+
         System.out.print("Categorie : ");
         String categorie = in.nextLine();
+
         System.out.print("Taille (en cm) : ");
         int taillecm = Integer.parseInt(in.nextLine());
 
-        Joueur j = new Joueur(-1, surnom, categorie, taillecm);
+        System.out.print("Nom : ");
+        String nom = in.nextLine();
 
-        j.setSurnom(surnom);
-        j.setCategorie(categorie);
-        j.setTaillecm(taillecm);
+        System.out.print("Prenom : ");
+        String prenom = in.nextLine();
+
+        System.out.print("Sexe (M/F) : ");
+        String sexe = in.nextLine();
+
+        System.out.print("Date de naissance (AAAA-MM-JJ, laisser vide si inconnu) : ");
+        String dateStr = in.nextLine();
+        LocalDate naissance = null;
+        if (!dateStr.isBlank()) {
+            naissance = LocalDate.parse(dateStr);
+        }
+
+        Joueur j = new Joueur(
+                surnom,
+                categorie,
+                taillecm,
+                nom,
+                prenom,
+                sexe,
+                naissance
+        );
 
         try {
             j.saveInDB(con);
-            // facultatif : garder aussi une copie en memoire
             tournoiCourant.ajouterJoueur(j);
             System.out.println("Joueur ajoute.");
         } catch (SQLException e) {
@@ -218,7 +245,7 @@ public class MainConsole {
         while (choix != 0) {
             System.out.println("\n=== Rondes / Matchs (admin) ===");
             System.out.println("1. Creer une nouvelle ronde");
-            System.out.println("2. Saisir le resultat d'un match (à completer)");
+            System.out.println("2. Saisir le resultat d'un match (a completer)");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -237,7 +264,7 @@ public class MainConsole {
     }
 
     private void creerRondeSimple() {
-        Ronde r = tournoiCourant.nouvelleronde();
+        Ronde r = tournoiCourant.nouvelleRonde();
         try {
             r.saveInDB(con);
             System.out.println("Ronde " + r.getNumero() + " creee.");
@@ -247,7 +274,7 @@ public class MainConsole {
     }
 
     private void saisirResultatMatch() {
-        System.out.println("Saisie de resultat de match : à implementer.");
+        System.out.println("Saisie de resultat de match : a implementer.");
     }
 
     // ================== TERRAINS (ADMIN) ==================
@@ -276,10 +303,13 @@ public class MainConsole {
     private void creerTerrain() {
         System.out.print("Nom du terrain : ");
         String nom = in.nextLine();
-        Terrain t = new Terrain(-1, nom);
+        Terrain t = new Terrain(nom);
         try {
             t.saveInDB(con);
             System.out.println("Terrain cree : " + t);
+            if (tournoiCourant != null) {
+                tournoiCourant.ajouterTerrain(t);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -289,7 +319,7 @@ public class MainConsole {
 
     private void afficherInfosTournoi() {
         if (tournoiCourant == null) {
-            System.out.println("Aucun tournoi courant (creez-le côte admin).");
+            System.out.println("Aucun tournoi courant (creez-le cote admin).");
             return;
         }
         System.out.println("\n=== Informations sur le tournoi ===");

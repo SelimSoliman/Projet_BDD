@@ -12,23 +12,23 @@ public class Equipe extends ClasseMiroir {
 
     private static final int TAILLE_REQUISE = 2;
 
-    private int id;
     private Match match;
     private int numero;   // 1 ou 2
     private int score;
     private List<Joueur> joueurs;
 
     public Equipe(Match match, int numero) {
+        super(); // id = -1
         this.match = match;
         this.numero = numero;
         this.joueurs = new ArrayList<>();
         this.score = 0;
     }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    // --------- GETTERS / SETTERS ---------
 
     public Match getMatch() { return match; }
+
     public int getNumero() { return numero; }
 
     public int getTailleActuelle() {
@@ -42,6 +42,18 @@ public class Equipe extends ClasseMiroir {
     public boolean estValide() {
         return joueurs.size() == TAILLE_REQUISE;
     }
+
+    public List<Joueur> getJoueurs() {
+        return new ArrayList<>(joueurs);
+    }
+
+    public int getScoreTotal() { return score; }
+
+    public void ajouterScore(int score) {
+        this.score += score;
+    }
+
+    // --------- GESTION DES JOUEURS ---------
 
     public void ajouterJoueur(Joueur joueur) {
         if (joueurs.size() >= TAILLE_REQUISE) {
@@ -65,22 +77,14 @@ public class Equipe extends ClasseMiroir {
         }
     }
 
-    public List<Joueur> getJoueurs() {
-        return new ArrayList<>(joueurs);
-    }
-
-    public int getScoreTotal() { return score; }
-
-    public void ajouterScore(int score) {
-        this.score += score;
-    }
+    // --------- PERSISTENCE EQUIPE ---------
 
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = """
             INSERT INTO Equipe (id_match, numero, score)
             VALUES (?, ?, ?)
-        """;
+            """;
         PreparedStatement ps =
             con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
@@ -88,8 +92,35 @@ public class Equipe extends ClasseMiroir {
         ps.setInt(2, this.numero);
         ps.setInt(3, this.score);
 
+        ps.executeUpdate();      // exécute l'INSERT
+
         return ps;
     }
+
+    /**
+     * Sauvegarde l'association joueurs <-> match/équipe
+     * dans la table Match_Joueur (id_match, id_joueur, numero_equipe).
+     */
+    public void saveJoueursDansEquipe(Connection con) throws SQLException {
+        if (this.getId() == -1) {
+            throw new ClasseMiroir.EntiteNonSauvegardee();
+        }
+        String sql = """
+            INSERT INTO Match_Joueur (id_match, id_joueur, numero_equipe)
+            VALUES (?, ?, ?)
+            """;
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            for (Joueur j : joueurs) {
+                ps.setInt(1, this.match.getId());
+                ps.setInt(2, j.getId());
+                ps.setInt(3, this.numero);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    // --------- DIVERS ---------
 
     @Override
     public String toString() {

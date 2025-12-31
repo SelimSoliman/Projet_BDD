@@ -1,71 +1,93 @@
- /*
-Copyright 2000- Francois de Bertrand de Beuvron
-
-This file is part of CoursBeuvron.
-
-CoursBeuvron is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CoursBeuvron is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
- */
 package fr.insa.toto.model;
 
-/**
- *
- * @author ThinkPad
- */
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import fr.insa.beuvron.utils.database.ClasseMiroir;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import fr.insa.toto.model.Match;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Ronde extends ClasseMiroir{
+public class Ronde extends ClasseMiroir {
 
-    private int numero;                       
-    private LocalDateTime debut;
-    private boolean close = false;            
+    // --- attributs BD ---
+    private Tournoi tournoi;              // tournoi auquel appartient la ronde
+    private int numero;                   // place dans le tournoi : 1, 2, 3...
+    private LocalDateTime debut;          // timestamp de debut
+    private boolean close = false;        // statut close / en cours
+
+    // --- cote Java ---
     private List<Match> matchs = new ArrayList<>();
 
-    public Ronde(int numero) {
+    // Ronde nouvelle (non encore sauvegardee)
+    public Ronde(Tournoi tournoi, int numero) {
+        super();                    // id = -1
+        this.tournoi = tournoi;
         this.numero = numero;
         this.debut = LocalDateTime.now();
     }
 
+    // Ronde recuperee depuis la BD (si besoin)
+    public Ronde(int id, Tournoi tournoi, int numero,
+                 LocalDateTime debut, boolean close) {
+        super(id);
+        this.tournoi = tournoi;
+        this.numero = numero;
+        this.debut = debut;
+        this.close = close;
+    }
+
+    // ----------- GETTERS / SETTERS -----------
+
+    public Tournoi getTournoi() { return tournoi; }
+
     public int getNumero() { return numero; }
+
+    public LocalDateTime getDebut() { return debut; }
+
     public boolean isClose() { return close; }
+
     public void clore() { this.close = true; }
 
-    public List<Match> getmatchs() { return matchs; }
+    public List<Match> getMatchs() { return matchs; }
 
-    public void ajoutermatch(Match m) {
-        this.matchs.add(m);
+    public void ajouterMatch(Match m) {
+        if (close) {
+            throw new IllegalStateException("Impossible d'ajouter un match : ronde deja close");
+        }
+        if (m == null) {
+            throw new IllegalArgumentException("Match null");
+        }
+        matchs.add(m);
     }
+
+    // ----------- PERSISTENCE -----------
+
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
-        String sql = "INSERT INTO Ronde (numero, debut, close) VALUES (?, ?, ?)";
-        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        String sql = """
+            INSERT INTO Ronde (id_tournoi, numero, debut, close)
+            VALUES (?, ?, ?, ?)
+            """;
+        PreparedStatement ps =
+            con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-        ps.setInt(1, this.numero);
-        ps.setTimestamp(2, java.sql.Timestamp.valueOf(this.debut));
-        ps.setBoolean(3, this.close);
-        
-        ps.executeUpdate();
+        ps.setInt(1, tournoi.getId());
+        ps.setInt(2, this.numero);
+        ps.setTimestamp(3, java.sql.Timestamp.valueOf(this.debut));
+        ps.setBoolean(4, this.close);
+
+        ps.executeUpdate();   // execute l'INSERT
+
         return ps;
     }
+
+    @Override
+    public String toString() {
+        return "Ronde " + numero
+                + " (debut : " + debut
+                + ", " + (close ? "close" : "en cours")
+                + ", " + matchs.size() + " matchs)";
+    }
 }
-
-
