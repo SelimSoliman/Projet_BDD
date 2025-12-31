@@ -44,7 +44,7 @@ public class MainConsole {
             var opt = Utilisateur.findBySurnomPass(con, surnom, pass);
             if (opt.isPresent()) {
                 utilisateurCourant = opt.get();
-                System.out.println("Connecté en tant que " + surnom +
+                System.out.println("Connecte en tant que " + surnom +
                         " (rôle = " + (estAdmin() ? "admin" : "utilisateur") + ")");
                 break;
             } else {
@@ -59,7 +59,7 @@ public class MainConsole {
 
     private void ifAdmin(Runnable action) {
         if (!estAdmin()) {
-            System.out.println("Fonctionnalité réservée à un administrateur.");
+            System.out.println("Fonctionnalite reservee à un administrateur.");
             return;
         }
         action.run();
@@ -106,7 +106,7 @@ public class MainConsole {
     private void razBdd() {
         try {
             GestionBDD.razBdd(con);
-            System.out.println("Base recréée.");
+            System.out.println("Base recreee.");
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -118,13 +118,13 @@ public class MainConsole {
         String nom = "Tournoi principal";
         System.out.print("Nombre de terrains : ");
         int nbTerrains = Integer.parseInt(in.nextLine());
-        System.out.print("Nombre de joueurs par équipe : ");
+        System.out.print("Nombre de joueurs par equipe : ");
         int nbJoueursParEquipe = Integer.parseInt(in.nextLine());
 
         this.tournoiCourant = new Tournoi(nom, nbTerrains);
         try {
             tournoiCourant.saveInDB(con);
-            System.out.println("Tournoi '" + nom + "' créé et sauvegardé.");
+            System.out.println("Tournoi '" + nom + "' cree et sauvegarde.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -157,18 +157,18 @@ public class MainConsole {
 
     private void ajouterJoueurConsole() {
         if (tournoiCourant == null) {
-            System.out.println("Créez d'abord le tournoi (option 2).");
+            System.out.println("Creez d'abord le tournoi (option 2).");
             return;
         }
 
         System.out.print("Surnom : ");
         String surnom = in.nextLine();
-        System.out.print("Catégorie : ");
+        System.out.print("Categorie : ");
         String categorie = in.nextLine();
         System.out.print("Taille (en cm) : ");
         int taillecm = Integer.parseInt(in.nextLine());
 
-        Joueur j = new Joueur(0, surnom, categorie, taillecm);
+        Joueur j = new Joueur(-1, surnom, categorie, taillecm);
 
         j.setSurnom(surnom);
         j.setCategorie(categorie);
@@ -176,9 +176,9 @@ public class MainConsole {
 
         try {
             j.saveInDB(con);
-            // facultatif : garder aussi une copie en mémoire
+            // facultatif : garder aussi une copie en memoire
             tournoiCourant.ajouterJoueur(j);
-            System.out.println("Joueur ajouté.");
+            System.out.println("Joueur ajoute.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -211,14 +211,14 @@ public class MainConsole {
 
     private void menuRondesMatchs() {
         if (tournoiCourant == null) {
-            System.out.println("Créez d'abord le tournoi.");
+            System.out.println("Creez d'abord le tournoi.");
             return;
         }
         int choix = -1;
         while (choix != 0) {
             System.out.println("\n=== Rondes / Matchs (admin) ===");
-            System.out.println("1. Créer une nouvelle ronde");
-            System.out.println("2. Saisir le résultat d'un match (à compléter)");
+            System.out.println("1. Creer une nouvelle ronde");
+            System.out.println("2. Saisir le resultat d'un match (à completer)");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -240,14 +240,14 @@ public class MainConsole {
         Ronde r = tournoiCourant.nouvelleronde();
         try {
             r.saveInDB(con);
-            System.out.println("Ronde " + r.getNumero() + " créée.");
+            System.out.println("Ronde " + r.getNumero() + " creee.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
     private void saisirResultatMatch() {
-        System.out.println("Saisie de résultat de match : à implémenter.");
+        System.out.println("Saisie de resultat de match : à implementer.");
     }
 
     // ================== TERRAINS (ADMIN) ==================
@@ -256,7 +256,7 @@ public class MainConsole {
         int choix = -1;
         while (choix != 0) {
             System.out.println("\n=== Terrains (admin) ===");
-            System.out.println("1. Créer un terrain");
+            System.out.println("1. Creer un terrain");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -276,10 +276,10 @@ public class MainConsole {
     private void creerTerrain() {
         System.out.print("Nom du terrain : ");
         String nom = in.nextLine();
-        Terrain t = new Terrain(0, nom);
+        Terrain t = new Terrain(-1, nom);
         try {
             t.saveInDB(con);
-            System.out.println("Terrain créé : " + t);
+            System.out.println("Terrain cree : " + t);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -289,7 +289,7 @@ public class MainConsole {
 
     private void afficherInfosTournoi() {
         if (tournoiCourant == null) {
-            System.out.println("Aucun tournoi courant (créez-le côté admin).");
+            System.out.println("Aucun tournoi courant (creez-le côte admin).");
             return;
         }
         System.out.println("\n=== Informations sur le tournoi ===");

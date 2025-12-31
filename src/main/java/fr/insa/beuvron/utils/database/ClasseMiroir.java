@@ -136,7 +136,11 @@ public abstract class ClasseMiroir implements Serializable {
         }
         Statement saveAllButId = this.saveSansId(con);
         try (ResultSet rid = saveAllButId.getGeneratedKeys()) {
-            rid.next();
+           if (!rid.next()){
+               throw new SQLException("Aucune cle generee renvoyee par le SGBD (getGeneratedKeys() vide)");
+             }
+            
+           
             this.id = rid.getInt(1);
             return this.id;
         }
@@ -175,7 +179,7 @@ public abstract class ClasseMiroir implements Serializable {
             throw new EntiteNonSauvegardee();
         }
         ClasseMiroir other = (ClasseMiroir) obj;
-        if (other.id != -1) {
+        if (other.id == -1) {
             throw new EntiteNonSauvegardee();
         } else {
             return this.id == other.id;
@@ -183,3 +187,116 @@ public abstract class ClasseMiroir implements Serializable {
     }
 
 }
+//
+//
+//package fr.insa.beuvron.utils.database;
+//
+//import java.io.Serializable;
+//import java.sql.Connection;
+//import java.sql.ResultSet;
+//import java.sql.SQLException;
+//import java.sql.Statement;
+//
+//public abstract class ClasseMiroir implements Serializable {
+//
+//    private static final long serialVersionUID = 1L;
+//
+//    private int id;
+//
+//    // ================= CONSTRUCTEURS =================
+//
+//    public ClasseMiroir(int id) {
+//        this.id = id;
+//    }
+//
+//    public ClasseMiroir() {
+//        this(-1);
+//    }
+//
+//    // ================= EXCEPTIONS =================
+//
+//    public static class EntiteDejaSauvegardee extends SQLException {
+//        public EntiteDejaSauvegardee() {
+//            super("L'entité a déjà été sauvegardée (id != -1)");
+//        }
+//    }
+//
+//    public static class EntiteNonSauvegardee extends Error {
+//        public EntiteNonSauvegardee() {
+//            super("Entité non sauvegardée : opération interdite");
+//        }
+//    }
+//
+//    // ================= CONTRAT À RESPECTER =================
+//
+//    /**
+//     * Doit :
+//     *  - faire un INSERT sans l'id
+//     *  - utiliser RETURN_GENERATED_KEYS
+//     *  - exécuter la requête
+//     *  - retourner le Statement utilisé
+//     */
+//    protected abstract Statement saveSansId(Connection con) throws SQLException;
+//
+//    // ================= SAUVEGARDE =================
+//
+//    public final int saveInDB(Connection con) throws SQLException {
+//
+//        if (this.id != -1) {
+//            throw new EntiteDejaSauvegardee();
+//        }
+//
+//        Statement stmt = this.saveSansId(con);
+//
+//        try (ResultSet rs = stmt.getGeneratedKeys()) {
+//
+//            if (!rs.next()) {
+//                throw new SQLException(
+//                    "Aucune clé générée par la base de données. "
+//                  + "Vérifiez que :\n"
+//                  + " - la clé primaire est AUTO_INCREMENT\n"
+//                  + " - le PreparedStatement utilise RETURN_GENERATED_KEYS"
+//                );
+//            }
+//
+//            this.id = rs.getInt(1);
+//            return this.id;
+//        }
+//    }
+//
+//    // ================= GESTION DE L'ÉTAT =================
+//
+//    protected void entiteSupprimee() {
+//        this.id = -1;
+//    }
+//
+//    public int getId() {
+//        return id;
+//    }
+//
+//    // ================= ÉGALITÉ / HASH =================
+//
+//    @Override
+//    public int hashCode() {
+//        if (this.id == -1) {
+//            throw new EntiteNonSauvegardee();
+//        }
+//        return this.id;
+//    }
+//
+//    @Override
+//    public boolean equals(Object obj) {
+//
+//        if (this == obj) return true;
+//        if (obj == null) return false;
+//        if (getClass() != obj.getClass()) return false;
+//
+//        ClasseMiroir other = (ClasseMiroir) obj;
+//
+//        if (this.id == -1 || other.id == -1) {
+//            throw new EntiteNonSauvegardee();
+//        }
+//
+//        return this.id == other.id;
+//    }
+//}

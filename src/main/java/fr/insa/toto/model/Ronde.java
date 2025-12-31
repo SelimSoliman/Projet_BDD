@@ -63,7 +63,7 @@ public class Ronde extends ClasseMiroir{
         ps.setTimestamp(2, java.sql.Timestamp.valueOf(this.debut));
         ps.setBoolean(3, this.close);
         
-
+        ps.executeUpdate();
         return ps;
     }
 }

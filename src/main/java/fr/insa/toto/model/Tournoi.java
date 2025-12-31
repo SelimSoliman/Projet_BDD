@@ -56,7 +56,7 @@ private static final int TAILLE_EQUIPE_FIXE = 2;
         ps.setString(1, this.nom);
         ps.setInt(2, this.nbTerrains);
         ps.setInt(3, this.nbJoueursParEquipe);   // toujours 2
-
+        ps.executeUpdate();
         return ps;
     }
 
