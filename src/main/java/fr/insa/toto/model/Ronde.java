@@ -83,14 +83,17 @@ public class Ronde extends ClasseMiroir {
         return ps;
     }
 public void updateInDB(Connection con) throws SQLException {
-    String sql = "update ronde set close = ?, debut = ?, fin = ? where id = ?";
+    if (this.getId() < 0) {
+        throw new IllegalStateException("Ronde sans id : impossible de faire update");
+    }
+    String sql = "update ronde set close = ? where id = ?";
     try (PreparedStatement ps = con.prepareStatement(sql)) {
-        ps.setBoolean(1, this.isClose());      // ou getClose() selon ton code
-        ps.setObject(2, this.getDebut());      // LocalDateTime ou autre
-        ps.setInt(3, this.getId());
+        ps.setBoolean(1, this.isClose());
+        ps.setInt(2, this.getId());
         ps.executeUpdate();
     }
 }
+
 
     @Override
     public String toString() {

@@ -4,8 +4,10 @@ import fr.insa.beuvron.utils.database.ClasseMiroir;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -20,12 +22,12 @@ public class Tournoi extends ClasseMiroir {
     private int nbTerrains;
     private int nbJoueursParEquipe = TAILLE_EQUIPE_FIXE;
 
-    // --- collections ---
-    private List<Joueur> joueurs = new ArrayList<>();
-    private List<Ronde> rondes = new ArrayList<>();
-    private List<Terrain> terrains = new ArrayList<>();
+    // --- collections (mémoire) ---
+    private final List<Joueur> joueurs = new ArrayList<>();
+    private final List<Ronde> rondes = new ArrayList<>();
+    private final List<Terrain> terrains = new ArrayList<>();
 
-    // --- Constructeur pour un nouveau tournoi ---
+    // --- Constructeur ---
     public Tournoi(String nom, int nbTerrains) {
         super(); // id = -1
         this.nom = nom;
@@ -33,40 +35,96 @@ public class Tournoi extends ClasseMiroir {
         this.nbJoueursParEquipe = TAILLE_EQUIPE_FIXE;
     }
 
-    // --- Persistance ---
+    // =======================
+    // Persistance (INSERT)
+    // =======================
 
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = """
-            INSERT INTO tournoi (nom, nb_terrains, nb_joueurs_par_equipe)
-            VALUES (?, ?, ?)
-            """;
-        PreparedStatement ps =
-            con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-
+                INSERT INTO tournoi (nom, nb_terrains, nb_joueurs_par_equipe)
+                VALUES (?, ?, ?)
+                """;
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, this.nom);
         ps.setInt(2, this.nbTerrains);
         ps.setInt(3, this.nbJoueursParEquipe);
-
-        ps.executeUpdate();   // exécute l'INSERT
-
+        ps.executeUpdate();
         return ps;
     }
 
-    // --- Getters de configuration ---
+    // =======================
+    // Persistance (SELECT/UPDATE) : pour la page "Paramètres"
+    // =======================
 
-    public String getNom() { return nom; }
+    /** Récupère le tournoi unique (hypothèse du sujet) */
+    public static Tournoi getUnique(Connection con) throws SQLException {
+        String sql = "select id, nom, nb_terrains, nb_joueurs_par_equipe from tournoi limit 1";
+        try (PreparedStatement pst = con.prepareStatement(sql);
+             ResultSet rs = pst.executeQuery()) {
 
-    public int getNbTerrains() { return nbTerrains; }
+            if (!rs.next()) return null;
 
-    public int getNbJoueursParEquipe() { return nbJoueursParEquipe; }
+            Tournoi t = new Tournoi(rs.getString("nom"), rs.getInt("nb_terrains"));
+            t.setId(rs.getInt("id"));
+            t.setNbJoueursParEquipe(rs.getInt("nb_joueurs_par_equipe"));
+            return t;
+        }
+    }
 
-    // --- Gestion des joueurs ---
+    /** Met à jour les paramètres du tournoi */
+    public void updateInDB(Connection con) throws SQLException {
+        if (this.getId() < 0) {
+            throw new IllegalStateException("Tournoi sans id : impossible de faire update");
+        }
+        String sql = """
+                update tournoi
+                set nom = ?, nb_terrains = ?, nb_joueurs_par_equipe = ?
+                where id = ?
+                """;
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, this.nom);
+            pst.setInt(2, this.nbTerrains);
+            pst.setInt(3, this.nbJoueursParEquipe);
+            pst.setInt(4, this.getId());
+            pst.executeUpdate();
+        }
+    }
+
+    // =======================
+    // Getters / Setters
+    // =======================
+
+    public String getNom() {
+        return nom;
+    }
+
+    public int getNbTerrains() {
+        return nbTerrains;
+    }
+
+    public int getNbJoueursParEquipe() {
+        return nbJoueursParEquipe;
+    }
+
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
+
+    public void setNbTerrains(int nbTerrains) {
+        this.nbTerrains = nbTerrains;
+    }
+
+    public void setNbJoueursParEquipe(int nbJoueursParEquipe) {
+        this.nbJoueursParEquipe = nbJoueursParEquipe;
+    }
+
+    // =======================
+    // Gestion joueurs
+    // =======================
 
     public void ajouterJoueur(Joueur j) {
-        if (j == null) {
-            throw new IllegalArgumentException("Joueur null");
-        }
+        if (j == null) throw new IllegalArgumentException("Joueur null");
         joueurs.add(j);
     }
 
@@ -74,101 +132,116 @@ public class Tournoi extends ClasseMiroir {
         return Collections.unmodifiableList(joueurs);
     }
 
-    // --- Gestion des terrains (extension simple) ---
+    // =======================
+    // Gestion terrains
+    // =======================
 
-   public void ajouterTerrain(Terrain t) {
-    if (t == null) {
-        throw new IllegalArgumentException("Terrain null");
+    public void ajouterTerrain(Terrain t) {
+        if (t == null) throw new IllegalArgumentException("Terrain null");
+        terrains.add(t);
     }
-    terrains.add(t);
-}
-
 
     public List<Terrain> getTerrains() {
         return Collections.unmodifiableList(terrains);
     }
 
-    // --- Gestion des rondes ---
+    // =======================
+    // Gestion rondes
+    // =======================
 
-    /**
-     * Crée la ronde suivante du tournoi (1, 2, 3, ...).
-     * Le sujet impose que toutes les rondes précédentes soient closes.
-     */
-   public Ronde nouvelleRonde() {
-    if (!rondes.isEmpty()) {
-        Ronde derniere = rondes.get(rondes.size() - 1);
-        if (!derniere.isClose()) {
-            throw new IllegalStateException(
-                "Impossible de creer une nouvelle ronde : la ronde "
-                + derniere.getNumero() + " n'est pas encore close.");
+    public Ronde nouvelleRonde() {
+        if (!rondes.isEmpty()) {
+            Ronde derniere = rondes.get(rondes.size() - 1);
+            if (!derniere.isClose()) {
+                throw new IllegalStateException(
+                        "Impossible de creer une nouvelle ronde : la ronde "
+                                + derniere.getNumero() + " n'est pas encore close.");
+            }
         }
+        Ronde r = new Ronde(this, rondes.size() + 1);
+        rondes.add(r);
+        return r;
     }
-    Ronde r = new Ronde(this, rondes.size() + 1);
-    rondes.add(r);
-    return r;
-}
 
     public List<Ronde> getRondes() {
         return Collections.unmodifiableList(rondes);
     }
 
-    // --- Classement des joueurs (simplifié) ---
+    // =======================
+    // Classement joueurs (squelette)
+    // =======================
 
-    /**
-     * Classe les joueurs par score total sur l'ensemble du tournoi.
-     * Le calcul précis dépendra de la façon dont tu stockes les scores par joueur
-     * (via Match_Joueur). Ici on ne fait que prévoir le squelette.
-     */
     public List<Joueur> classementJoueurs() {
         List<Joueur> copie = new ArrayList<>(joueurs);
-        // À implémenter : computeScore(j) doit utiliser Match_Joueur
         copie.sort(Comparator.comparingInt(this::computeScore).reversed());
         return copie;
     }
-public void creerMatchsPourRonde(Ronde r, int tailleEquipe, Connection con) throws SQLException {
-    List<Joueur> tous = new ArrayList<>(this.joueurs);
 
-    // on peut faire au moins un match si on a 2 * tailleEquipe joueurs
-    int joueursParMatch = 2 * tailleEquipe;
-    int nbMatchsPossible = tous.size() / joueursParMatch;
-    if (nbMatchsPossible == 0) {
-        throw new IllegalStateException("Pas assez de joueurs pour faire un match");
+    // =======================
+    // Création matchs pour une ronde
+    // =======================
+
+    /** Version pratique : utilise la taille d'équipe du tournoi */
+    public void creerMatchsPourRonde(Ronde r, Connection con) throws SQLException {
+        creerMatchsPourRonde(r, this.nbJoueursParEquipe, con);
     }
 
-    int nbMatchs = Math.min(nbMatchsPossible, terrains.size());
+    public void creerMatchsPourRonde(Ronde r, int tailleEquipe, Connection con) throws SQLException {
+        if (r == null) throw new IllegalArgumentException("Ronde null");
+        if (tailleEquipe <= 0) throw new IllegalArgumentException("tailleEquipe invalide");
 
-    Collections.shuffle(tous);
+        List<Joueur> tous = new ArrayList<>(this.joueurs);
 
-    for (int i = 0; i < nbMatchs; i++) {
-        Terrain terrain = terrains.get(i);
+        int joueursParMatch = 2 * tailleEquipe;
+        int nbMatchsPossible = tous.size() / joueursParMatch;
 
-        Match m = new Match(r, terrain);
-        m.saveInDB(con);
-
-        Equipe e1 = m.getEquipe1();
-        Equipe e2 = m.getEquipe2();
-
-        for (int j = 0; j < tailleEquipe; j++) {
-            Joueur j1 = tous.remove(0);
-            Joueur j2 = tous.remove(0);
-            e1.ajouterJoueur(j1);
-            e2.ajouterJoueur(j2);
+        if (nbMatchsPossible == 0) {
+            throw new IllegalStateException("Pas assez de joueurs pour faire un match");
+        }
+        if (terrains.isEmpty()) {
+            throw new IllegalStateException("Aucun terrain disponible");
         }
 
-        e1.saveInDB(con);
-        e1.saveJoueursDansEquipe(con);
+        int nbMatchs = Math.min(nbMatchsPossible, terrains.size());
+        Collections.shuffle(tous);
 
-        e2.saveInDB(con);
-        e2.saveJoueursDansEquipe(con);
+        for (int i = 0; i < nbMatchs; i++) {
+            Terrain terrain = terrains.get(i);
 
-        r.getMatchs().add(m);
+            Match m = new Match(r, terrain);
+            m.saveInDB(con);
+
+            Equipe e1 = m.getEquipe1();
+            Equipe e2 = m.getEquipe2();
+
+            for (int j = 0; j < tailleEquipe; j++) {
+                Joueur j1 = tous.remove(0);
+                Joueur j2 = tous.remove(0);
+                e1.ajouterJoueur(j1);
+                e2.ajouterJoueur(j2);
+            }
+
+            // IMPORTANT : selon ton modèle, Equipe doit être liée au match via id_match/numero
+            // Ici on suppose que Match a déjà créé e1/e2 correctement.
+            e1.saveInDB(con);
+            e1.saveJoueursDansEquipe(con);
+
+            e2.saveInDB(con);
+            e2.saveJoueursDansEquipe(con);
+
+            // ⚠️ ton getMatchs() est unmodifiable dans ton code actuel ?
+            // Donc ici il vaut mieux avoir une méthode r.ajouterMatch(m) dans Ronde.
+            // Si tu as une liste modifiable dans Ronde, OK :
+            r.getMatchs().add(m);
+        }
     }
-}
 
-
-    // Méthode à compléter plus tard avec la vraie logique
     private int computeScore(Joueur j) {
-        // TODO : sommer les scores obtenus dans tous les matchs
+        // TODO : sommer les scores obtenus dans tous les matchs via Match_Joueur
         return 0;
+    }
+
+    private void setId(int aInt) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 }
