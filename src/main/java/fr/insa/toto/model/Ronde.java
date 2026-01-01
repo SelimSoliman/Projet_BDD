@@ -67,7 +67,7 @@ public class Ronde extends ClasseMiroir {
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = """
-            INSERT INTO Ronde (id_tournoi, numero, debut, close)
+            INSERT INTO ronde (id_tournoi, numero, debut, close)
             VALUES (?, ?, ?, ?)
             """;
         PreparedStatement ps =
@@ -82,6 +82,15 @@ public class Ronde extends ClasseMiroir {
 
         return ps;
     }
+public void updateInDB(Connection con) throws SQLException {
+    String sql = "update ronde set close = ?, debut = ?, fin = ? where id = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setBoolean(1, this.isClose());      // ou getClose() selon ton code
+        ps.setObject(2, this.getDebut());      // LocalDateTime ou autre
+        ps.setInt(3, this.getId());
+        ps.executeUpdate();
+    }
+}
 
     @Override
     public String toString() {

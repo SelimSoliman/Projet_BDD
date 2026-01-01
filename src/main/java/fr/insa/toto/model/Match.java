@@ -90,7 +90,7 @@ public class Match extends ClasseMiroir {
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = """
-            INSERT INTO Matchs (ronde_id, terrain_id, score_e1, score_e2, statut)
+            INSERT INTO matchs (ronde_id, terrain_id, score_e1, score_e2, statut)
             VALUES (?, ?, ?, ?, ?)
             """;
         PreparedStatement ps =

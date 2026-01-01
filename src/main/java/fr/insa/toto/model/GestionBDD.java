@@ -34,7 +34,9 @@ public class GestionBDD {
                         + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
                         + " surnom varchar(30) not null unique,"
                         + " nom varchar(50),"
-                        + " prenom varchar(50),"
+                        + " taillecm int,"
+                        + " prenom varchar (50),"
+                        + " categorie varchar(50),"
                         + " sexe char(1),"
                         + " date_naissance date"
                         + ")");

@@ -78,8 +78,9 @@ public class MainConsole {
                 System.out.println("3. Gerer les joueurs");
                 System.out.println("4. Gerer les rondes / matchs");
                 System.out.println("5. Gerer les terrains");
+                System.out.println("6. Gerer les equipes");
             }
-            System.out.println("6. Consulter les informations du tournoi");
+            System.out.println("7. Consulter les informations du tournoi");
             System.out.println("0. Quitter");
             System.out.print("Votre choix : ");
 
@@ -95,7 +96,8 @@ public class MainConsole {
                 case 3 -> ifAdmin(this::menuJoueurs);
                 case 4 -> ifAdmin(this::menuRondesMatchs);
                 case 5 -> ifAdmin(this::menuTerrains);
-                case 6 -> afficherInfosTournoi();
+                case 6 -> ifAdmin(this::menuEquipes);
+                case 7 -> afficherInfosTournoi();
                 case 0 -> System.out.println("Au revoir.");
                 default -> System.out.println("Choix invalide");
             }
@@ -144,6 +146,7 @@ public class MainConsole {
             System.out.println("\n=== Joueurs (admin) ===");
             System.out.println("1. Ajouter un joueur");
             System.out.println("2. Lister les joueurs du tournoi courant");
+            System.out.println("3. Supprimer un joueur");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -155,6 +158,7 @@ public class MainConsole {
             switch (choix) {
                 case 1 -> ajouterJoueurConsole();
                 case 2 -> listerJoueursTournoi();
+                case 3 -> supprimerJoueurConsole();
                 case 0 -> { }
                 default -> System.out.println("Choix invalide");
             }
@@ -225,12 +229,43 @@ public class MainConsole {
                 for (Joueur j : joueurs) {
                     System.out.println(" " + j.getId()
                             + " | " + j.getSurnom()
-                            + " | " + j.getCategorie()
-                            + " | " + j.getTaillecm() + " cm");
+                            + " | " + j.getNom()
+                            + " " + j.getPrenom()
+                            + " | cat: " + j.getCategorie()
+                            + " | taille: " + j.getTaillecm() + " cm"
+                            + " | sexe: " + j.getSexe()
+                            + " | ne le: " + j.getDateNaissance());
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void supprimerJoueurConsole() {
+        if (tournoiCourant == null) {
+            System.out.println("Aucun tournoi courant.");
+            return;
+        }
+
+        listerJoueursTournoi();
+
+        System.out.print("Id du joueur a supprimer : ");
+        int id;
+        try {
+            id = Integer.parseInt(in.nextLine());
+        } catch (NumberFormatException ex) {
+            System.out.println("Id invalide.");
+            return;
+        }
+
+        try {
+            Joueur.supprimer(con, id);   // suppression en base
+            System.out.println("Joueur " + id + " supprime.");
+            // NE PAS modifier tournoiCourant.getJoueurs() ici (liste non modifiable)
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("Erreur lors de la suppression du joueur.");
         }
     }
 
@@ -246,6 +281,8 @@ public class MainConsole {
             System.out.println("\n=== Rondes / Matchs (admin) ===");
             System.out.println("1. Creer une nouvelle ronde");
             System.out.println("2. Saisir le resultat d'un match (a completer)");
+            System.out.println("3. Clore la derniere ronde");
+            System.out.println("4. Lister les rondes");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -257,6 +294,8 @@ public class MainConsole {
             switch (choix) {
                 case 1 -> creerRondeSimple();
                 case 2 -> saisirResultatMatch();
+                case 3 -> cloreDerniereRonde();
+                case 4 -> listerRondes();
                 case 0 -> { }
                 default -> System.out.println("Choix invalide");
             }
@@ -264,17 +303,104 @@ public class MainConsole {
     }
 
     private void creerRondeSimple() {
-        Ronde r = tournoiCourant.nouvelleRonde();
-        try {
-            r.saveInDB(con);
-            System.out.println("Ronde " + r.getNumero() + " creee.");
-        } catch (SQLException e) {
-            e.printStackTrace();
+    Ronde r;
+    try {
+        r = tournoiCourant.nouvelleRonde();
+    } catch (IllegalStateException e) {
+        System.out.println(e.getMessage());
+        return;
+    }
+    try {
+        r.saveInDB(con);
+
+        // Récupérer les joueurs depuis la base et les mettre dans le tournoi
+        // sans appeler clear() sur une liste non modifiable
+        List<Joueur> joueursBd = Joueur.tousLesJoueurs(con);
+        for (Joueur j : joueursBd) {
+            tournoiCourant.ajouterJoueur(j);   // ajouterJoueur doit gérer les doublons eventuels
+        }
+
+        // créer les matchs pour cette ronde
+        tournoiCourant.creerMatchsPourRonde(r, 2, con);
+
+        System.out.println("Ronde " + r.getNumero() + " creee avec "
+                + r.getMatchs().size() + " match(s).");
+
+        afficherMatchsRonde(r);
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    } catch (IllegalStateException e) {
+        System.out.println("Impossible de creer les matchs : " + e.getMessage());
+    }
+}
+
+    private void afficherMatchsRonde(Ronde r) {
+        System.out.println("\nMatchs de la ronde " + r.getNumero() + " :");
+        for (Match m : r.getMatchs()) {
+            Terrain t = m.getTerrain();
+            String nomTerrain = (t == null) ? "sans terrain" : t.getNom();
+
+            System.out.println("- Match " + m.getId() + " sur terrain " + nomTerrain);
+
+            System.out.print("  Equipe 1 : ");
+            for (Joueur j : m.getEquipe1().getJoueurs()) {
+                System.out.print(j.getSurnom() + " ");
+            }
+            System.out.println();
+
+            System.out.print("  Equipe 2 : ");
+            for (Joueur j : m.getEquipe2().getJoueurs()) {
+                System.out.print(j.getSurnom() + " ");
+            }
+            System.out.println();
         }
     }
 
     private void saisirResultatMatch() {
         System.out.println("Saisie de resultat de match : a implementer.");
+    }
+
+    private void cloreDerniereRonde() {
+        List<Ronde> rondes = tournoiCourant.getRondes();
+        if (rondes.isEmpty()) {
+            System.out.println("Aucune ronde.");
+            return;
+        }
+
+        Ronde derniere = rondes.get(rondes.size() - 1);
+        if (derniere.isClose()) {
+            System.out.println("La ronde " + derniere.getNumero() + " est deja close.");
+            return;
+        }
+
+        derniere.clore();
+
+        try {
+            derniere.updateInDB(con);   // vérifier que updateInDB renseigne bien tous ses paramètres
+            System.out.println("Ronde " + derniere.getNumero() + " close.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("Erreur lors de la mise a jour de la ronde en base.");
+        }
+    }
+
+    private void listerRondes() {
+        if (tournoiCourant == null) {
+            System.out.println("Aucun tournoi courant.");
+            return;
+        }
+        if (tournoiCourant.getRondes().isEmpty()) {
+            System.out.println("Aucune ronde.");
+            return;
+        }
+        System.out.println("\nRondes du tournoi :");
+        for (Ronde r : tournoiCourant.getRondes()) {
+            System.out.println("Ronde " + r.getNumero()
+                    + " | debut: " + r.getDebut()
+                    + " | statut: " + (r.isClose() ? "close" : "en cours")
+                    + " | nb matchs: " + r.getMatchs().size());
+        }
     }
 
     // ================== TERRAINS (ADMIN) ==================
@@ -284,6 +410,8 @@ public class MainConsole {
         while (choix != 0) {
             System.out.println("\n=== Terrains (admin) ===");
             System.out.println("1. Creer un terrain");
+            System.out.println("2. Lister les terrains");
+            System.out.println("3. Supprimer un terrain");
             System.out.println("0. Retour");
             System.out.print("Votre choix : ");
             try {
@@ -294,9 +422,49 @@ public class MainConsole {
 
             switch (choix) {
                 case 1 -> creerTerrain();
+                case 2 -> listerTerrains();
+                case 3 -> supprimerTerrainConsole();
                 case 0 -> { }
                 default -> System.out.println("Choix invalide");
             }
+        }
+    }
+
+    private void supprimerTerrainConsole() {
+        if (tournoiCourant == null) {
+            System.out.println("Aucun tournoi courant.");
+            return;
+        }
+
+        listerTerrains();
+
+        System.out.print("Id du terrain a supprimer : ");
+        int id;
+        try {
+            id = Integer.parseInt(in.nextLine());
+        } catch (NumberFormatException ex) {
+            System.out.println("Id invalide.");
+            return;
+        }
+
+        try {
+            Terrain.supprimer(con, id);
+            System.out.println("Terrain " + id + " supprime.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.out.println("Erreur lors de la suppression du terrain.");
+        }
+    }
+
+    private void listerTerrains() {
+        if (tournoiCourant == null) {
+            System.out.println("Aucun tournoi courant.");
+            return;
+        }
+        System.out.println("Terrains du tournoi :");
+        for (Terrain t : tournoiCourant.getTerrains()) {
+            System.out.println(" " + t.getId() + " | " + t.getNom()
+                    + " | " + (t.estDisponible() ? "disponible" : "occupe"));
         }
     }
 
@@ -312,6 +480,63 @@ public class MainConsole {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    // ================== EQUIPES ==================
+
+    private void menuEquipes() {
+        if (tournoiCourant == null) {
+            System.out.println("Aucun tournoi courant.");
+            return;
+        }
+        int choix = -1;
+        while (choix != 0) {
+            System.out.println("\n=== Equipes ===");
+            System.out.println("1. Lister les equipes de la derniere ronde");
+            System.out.println("0. Retour");
+            System.out.print("Votre choix : ");
+            try {
+                choix = Integer.parseInt(in.nextLine());
+            } catch (NumberFormatException ex) {
+                choix = -1;
+            }
+            switch (choix) {
+                case 1 -> listerEquipesDerniereRonde();
+                case 0 -> { }
+                default -> System.out.println("Choix invalide");
+            }
+        }
+    }
+
+    private void listerEquipesDerniereRonde() {
+        List<Ronde> rondes = tournoiCourant.getRondes();
+        if (rondes.isEmpty()) {
+            System.out.println("Aucune ronde.");
+            return;
+        }
+        Ronde r = rondes.get(rondes.size() - 1);
+        if (r.getMatchs().isEmpty()) {
+            System.out.println("Aucun match cree dans la ronde " + r.getNumero());
+            return;
+        }
+        System.out.println("Equipes de la ronde " + r.getNumero() + " :");
+        for (Match m : r.getMatchs()) {
+            Terrain t = m.getTerrain();
+            String nomTerrain = (t == null) ? "sans terrain" : t.getNom();
+            System.out.println("- Match " + m.getId() + " sur terrain " + nomTerrain);
+
+            System.out.print("  Equipe 1 : ");
+            for (Joueur j : m.getEquipe1().getJoueurs()) {
+                System.out.print(j.getSurnom() + " ");
+            }
+            System.out.println();
+
+            System.out.print("  Equipe 2 : ");
+            for (Joueur j : m.getEquipe2().getJoueurs()) {
+                System.out.print(j.getSurnom() + " ");
+            }
+            System.out.println();
         }
     }
 

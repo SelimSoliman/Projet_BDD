@@ -72,7 +72,7 @@ public class Terrain extends ClasseMiroir {
 
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
-        String sql = "INSERT INTO Terrain (nom, disponible) VALUES (?, ?)";
+        String sql = "INSERT INTO terrain (nom, disponible) VALUES (?, ?)";
         PreparedStatement ps =
             con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
@@ -89,6 +89,13 @@ public class Terrain extends ClasseMiroir {
         return "Terrain " + getId() + " : " + nom +
                " - " + (disponible ? "Disponible" : "Occupé");
     }
+public static void supprimer(Connection con, int id) throws SQLException {
+    String sql = "delete from terrain where id = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, id);
+        ps.executeUpdate();
+    }
+}
 
     @Override
     public boolean equals(Object obj) {

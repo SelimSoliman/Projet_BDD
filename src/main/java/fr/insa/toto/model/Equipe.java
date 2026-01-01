@@ -82,7 +82,7 @@ public class Equipe extends ClasseMiroir {
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = """
-            INSERT INTO Equipe (id_match, numero, score)
+            INSERT INTO equipe (id_match, numero, score)
             VALUES (?, ?, ?)
             """;
         PreparedStatement ps =
@@ -106,7 +106,7 @@ public class Equipe extends ClasseMiroir {
             throw new ClasseMiroir.EntiteNonSauvegardee();
         }
         String sql = """
-            INSERT INTO Match_Joueur (id_match, id_joueur, numero_equipe)
+            INSERT INTO match_joueur (id_match, id_joueur, numero_equipe)
             VALUES (?, ?, ?)
             """;
         try (PreparedStatement ps = con.prepareStatement(sql)) {

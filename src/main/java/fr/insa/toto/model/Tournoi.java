@@ -125,6 +125,46 @@ public class Tournoi extends ClasseMiroir {
         copie.sort(Comparator.comparingInt(this::computeScore).reversed());
         return copie;
     }
+public void creerMatchsPourRonde(Ronde r, int tailleEquipe, Connection con) throws SQLException {
+    List<Joueur> tous = new ArrayList<>(this.joueurs);
+
+    // on peut faire au moins un match si on a 2 * tailleEquipe joueurs
+    int joueursParMatch = 2 * tailleEquipe;
+    int nbMatchsPossible = tous.size() / joueursParMatch;
+    if (nbMatchsPossible == 0) {
+        throw new IllegalStateException("Pas assez de joueurs pour faire un match");
+    }
+
+    int nbMatchs = Math.min(nbMatchsPossible, terrains.size());
+
+    Collections.shuffle(tous);
+
+    for (int i = 0; i < nbMatchs; i++) {
+        Terrain terrain = terrains.get(i);
+
+        Match m = new Match(r, terrain);
+        m.saveInDB(con);
+
+        Equipe e1 = m.getEquipe1();
+        Equipe e2 = m.getEquipe2();
+
+        for (int j = 0; j < tailleEquipe; j++) {
+            Joueur j1 = tous.remove(0);
+            Joueur j2 = tous.remove(0);
+            e1.ajouterJoueur(j1);
+            e2.ajouterJoueur(j2);
+        }
+
+        e1.saveInDB(con);
+        e1.saveJoueursDansEquipe(con);
+
+        e2.saveInDB(con);
+        e2.saveJoueursDansEquipe(con);
+
+        r.getMatchs().add(m);
+    }
+}
+
 
     // Méthode à compléter plus tard avec la vraie logique
     private int computeScore(Joueur j) {

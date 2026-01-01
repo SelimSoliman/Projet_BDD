@@ -92,6 +92,13 @@ public class Joueur extends ClasseMiroir {
         }
         return res;
     }
+public static void supprimer(Connection con, int id) throws SQLException {
+    String sql = "delete from joueur where id = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, id);
+        ps.executeUpdate();
+    }
+}
 
     // --- getters / setters pour tous les champs ---
 
