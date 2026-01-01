@@ -31,16 +31,16 @@ import fr.insa.toto.webui.utilisateurs.ListeUtilisateurs;
 public class MainMenu extends SideNav {
 
     public MainMenu() {
-        SideNavItem accueil = new SideNavItem("accueil", VuePrincipale.class);
+        SideNavItem accueil = new SideNavItem("Accueil", VuePrincipale.class);
 
-        SideNavItem utilisateurs = new SideNavItem("utilisateurs");
-        SideNavItem listeUtilisateurs = new SideNavItem("liste", ListeUtilisateurs.class);
+        SideNavItem utilisateurs = new SideNavItem("Utilisateurs");
+        SideNavItem listeUtilisateurs = new SideNavItem("Liste", ListeUtilisateurs.class);
 
         utilisateurs.addItem(listeUtilisateurs);
 
         // ✅ visible seulement pour les admins
         if (SessionInfo.adminConnected()) {
-            SideNavItem creationAdmin = new SideNavItem("creation(admin)", CreationAdmin.class);
+            SideNavItem creationAdmin = new SideNavItem("Création", CreationAdmin.class);
             utilisateurs.addItem(creationAdmin);
         }
 

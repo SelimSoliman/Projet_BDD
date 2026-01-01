@@ -34,7 +34,10 @@ public class VuePrincipale extends VerticalLayout {
 
     public VuePrincipale() {
         this.add(new H2("Bienvenue au site officiel du tournoi de Teqball"));
-        this.add(new Paragraph ("une superbe application"));
+        this.add(new Paragraph ("Bienvenue sur la plateforme officielle du tournoi de Teqball.\n" +
+"Suivez l’évolution des matchs en temps réel, découvrez les équipes, consultez les classements et vivez chaque ronde du tournoi au plus près.\n" +
+"Les organisateurs disposent d’outils dédiés pour gérer les joueurs, les terrains et les résultats en toute simplicité.\n" +
+"Une expérience claire, rapide et pensée pour le jeu."));
         
         
       
