@@ -15,7 +15,7 @@ public class Match extends ClasseMiroir {
 
     // --- attributs BD ---
     private Ronde ronde;        // ronde_id
-    private Terrain terrain;    // terrain_id (peut être null si tu ne l'utilises pas encore)
+    private Terrain terrain;    // terrain_id (peut être null)
     private Equipe equipe1;
     private Equipe equipe2;
     private Statut statut = Statut.EN_COURS;
@@ -42,7 +42,7 @@ public class Match extends ClasseMiroir {
         this.statut = statut;
     }
 
-    // ---------------- GETTERS ----------------
+    // ---------------- GETTERS / SETTERS ----------------
 
     public Ronde getRonde() { return ronde; }
 
@@ -61,11 +61,23 @@ public class Match extends ClasseMiroir {
 
     public boolean estClos() { return statut == Statut.CLOS; }
 
+    // setters de scores pour le menu "modifier match"
+    public void setScoreEquipe1(int score) {
+    // on suppose ici que le score total d une equipe pour ce match
+    // est simplement remplace par le nouveau score
+    // si Equipe ne stocke qu un score cumule, on peut utiliser ajouterScore
+    equipe1.ajouterScore(score);
+}
+
+public void setScoreEquipe2(int score) {
+    equipe2.ajouterScore(score);
+}
+
+
     // ---------------- MÉTHODES PRINCIPALES ----------------
 
     /**
      * Définit les scores et clôt le match.
-     * Conformément au sujet, chaque équipe obtient ce score.
      */
     public void definirScores(int score1, int score2) {
         if (statut == Statut.CLOS) {
@@ -75,8 +87,8 @@ public class Match extends ClasseMiroir {
             throw new IllegalArgumentException("Les scores doivent être positifs");
         }
 
-        equipe1.ajouterScore(score1);
-        equipe2.ajouterScore(score2);
+        setScoreEquipe1(score1);
+        setScoreEquipe2(score2);
 
         cloreMatch();
     }
@@ -109,6 +121,40 @@ public class Match extends ClasseMiroir {
         ps.executeUpdate();   // important
 
         return ps;
+    }
+
+    /**
+     * Mise à jour du match (scores + statut + terrain).
+     */
+    public void updateInDB(Connection con) throws SQLException {
+        String sql = """
+            UPDATE matchs
+            SET terrain_id = ?, score_e1 = ?, score_e2 = ?, statut = ?
+            WHERE id = ?
+            """;
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            if (terrain != null) {
+                ps.setInt(1, terrain.getId());
+            } else {
+                ps.setNull(1, java.sql.Types.INTEGER);
+            }
+            ps.setInt(2, this.getScoreEquipe1());
+            ps.setInt(3, this.getScoreEquipe2());
+            ps.setString(4, this.statut.name());
+            ps.setInt(5, this.getId());
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Suppression d'un match en BD.
+     */
+    public static void supprimer(Connection con, int id) throws SQLException {
+        String sql = "DELETE FROM matchs WHERE id = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
     }
 
     @Override
