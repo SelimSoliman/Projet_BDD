@@ -38,7 +38,7 @@ public class LogoutEntete extends HorizontalLayout {
             this.doLogout();
         });
 
-        this.add(new H3("bonjour " + SessionInfo.curUser().get().getSurnom()));
+        this.add(new H3("Bonjour " + SessionInfo.curUser().get().getSurnom()));
         this.add(this.logout);
     }
 
