@@ -813,11 +813,20 @@ private void supprimerEquipe() {
     }
 
     System.out.println("\n=== Informations sur le tournoi ===");
-    System.out.println("Nom : " + tournoiCourant.getNom());
-    System.out.println("Nombre de joueurs : " + tournoiCourant.getJoueurs().size());
-    System.out.println("Nombre de rondes : " + tournoiCourant.getRondes().size());
-    System.out.println("\n=== Rondes & resultats ===");
-    afficherRondesEtResultats();
+System.out.println("Nom : " + tournoiCourant.getNom());
+System.out.println("Nombre de joueurs : " + tournoiCourant.getJoueurs().size());
+
+try {
+    int nbRondes = Ronde.toutesLesRondes(con, tournoiCourant).size();
+    System.out.println("Nombre de rondes : " + nbRondes);
+} catch (SQLException e) {
+    e.printStackTrace();
+    System.out.println("Nombre de rondes : (erreur SQL)");
+}
+
+System.out.println("\n=== Rondes & resultats ===");
+afficherRondesEtResultats();
+
 
 
     // --- CLASSEMENT ACTUEL (exigé par le sujet) ---
@@ -873,7 +882,7 @@ private void afficherRondesEtResultats() {
 
 private void chargerTournoiDepuisBD() {
     try {
-        Tournoi t = Tournoi.getUnique(con); // ou getTournoiUnique(con) selon ton code
+        Tournoi t = Tournoi.getUnique(con); // adapte si ton nom est différent
         if (t == null) {
             this.tournoiCourant = null;
             return;
@@ -882,7 +891,8 @@ private void chargerTournoiDepuisBD() {
         // le tournoi courant devient celui de la BD
         this.tournoiCourant = t;
 
-        // recharger les listes en mémoire
+        // Recharge joueurs / terrains via les méthodes prévues par ton modèle
+        // (ici on utilise tes clearJoueurs/ajouterJoueur et clearTerrains/ajouterTerrain)
         this.tournoiCourant.clearJoueurs();
         for (Joueur j : Joueur.tousLesJoueurs(con)) {
             this.tournoiCourant.ajouterJoueur(j);
@@ -893,17 +903,15 @@ private void chargerTournoiDepuisBD() {
             this.tournoiCourant.ajouterTerrain(ter);
         }
 
-        // IMPORTANT : recharger les rondes + leurs matchs depuis la BD
-        // Si tu n’as pas encore ces méthodes, on les ajoute juste après.
-        // si getRondes() renvoie une liste modifiable; sinon voir note
-        for (Ronde r : Ronde.toutesLesRondes(con, this.tournoiCourant)) {
-            this.tournoiCourant.getRondes().add(r);
-        }
+        // IMPORTANT :
+        // Ne surtout PAS faire tournoiCourant.getRondes().add(...)
+        // Les rondes seront lues directement de la BD dans afficherRondesEtResultats().
 
     } catch (SQLException e) {
         e.printStackTrace();
         this.tournoiCourant = null;
     }
 }
+
 
 }
