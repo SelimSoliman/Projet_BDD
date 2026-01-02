@@ -1,27 +1,6 @@
-/*
-Copyright 2000- Francois de Bertrand de Beuvron
 
-This file is part of CoursBeuvron.
 
-CoursBeuvron is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CoursBeuvron is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
- */
 package fr.insa.toto.webui;
-
-/**
- *
- * @author ThinkPad
- */
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H2;
@@ -32,17 +11,17 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
+import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD; // adapte si ton package est différent
 import fr.insa.toto.model.Tournoi;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 
-@Route(value = "tournoi") // ajoute layout si tu as un MainLayout
+@Route(value = "tournoi", layout = MainLayout.class)
 @PageTitle("Paramètres du tournoi")
 public class TournoiParamView extends VerticalLayout {
 
-    private final Connection con;
+    private Connection con;
 
     private final TextField nom = new TextField("Nom du tournoi");
     private final IntegerField nbTerrains = new IntegerField("Nombre de terrains");
@@ -53,9 +32,19 @@ public class TournoiParamView extends VerticalLayout {
 
     private Tournoi tournoi;
 
-    public TournoiParamView() throws SQLException {
-        this.con = ConnectionSimpleSGBD.defaultCon();
+    public TournoiParamView() {
+        // 1) Connexion BDD (ne jamais throws dans un constructeur de View Vaadin)
+        try {
+            this.con = ConnectionSimpleSGBD.defaultCon();
+        } catch (SQLException e) {
+            Notification.show("Impossible de se connecter à la base : " + e.getMessage());
+            e.printStackTrace();
+            // on stoppe proprement : la vue s'affiche mais sans fonctionnalités
+            setEnabled(false);
+            return;
+        }
 
+        // 2) UI
         setMaxWidth("900px");
         setWidthFull();
 
@@ -68,15 +57,32 @@ public class TournoiParamView extends VerticalLayout {
                 new HorizontalLayout(enregistrer, recharger)
         );
 
+        // 3) Listeners (gérer les erreurs sans RuntimeException brutale)
         recharger.addClickListener(e -> {
-            try { load(); } catch (SQLException ex) { throw new RuntimeException(ex); }
+            try {
+                load();
+            } catch (SQLException ex) {
+                Notification.show("Erreur recharge : " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
 
         enregistrer.addClickListener(e -> {
-            try { save(); } catch (SQLException ex) { throw new RuntimeException(ex); }
+            try {
+                save();
+            } catch (SQLException ex) {
+                Notification.show("Erreur sauvegarde : " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
 
-        load();
+        // 4) Chargement initial
+        try {
+            load();
+        } catch (SQLException ex) {
+            Notification.show("Erreur chargement : " + ex.getMessage());
+            ex.printStackTrace();
+        }
     }
 
     private void load() throws SQLException {
@@ -122,4 +128,3 @@ public class TournoiParamView extends VerticalLayout {
         load();
     }
 }
-
