@@ -226,54 +226,60 @@ public Tournoi(int id, String nom, int nbTerrains, int nbJoueursParEquipe) {
     }
 
     public void creerMatchsPourRonde(Ronde r, int tailleEquipe, Connection con) throws SQLException {
-        if (r == null) throw new IllegalArgumentException("Ronde null");
-        if (tailleEquipe <= 0) throw new IllegalArgumentException("tailleEquipe invalide");
+    if (r == null) throw new IllegalArgumentException("Ronde null");
+    if (tailleEquipe <= 0) throw new IllegalArgumentException("tailleEquipe invalide");
 
-        List<Joueur> tous = new ArrayList<>(this.joueurs);
+    List<Joueur> tous = new ArrayList<>(this.joueurs);
 
-        int joueursParMatch = 2 * tailleEquipe;
-        int nbMatchsPossible = tous.size() / joueursParMatch;
+    int joueursParMatch = 2 * tailleEquipe;
+    int nbMatchsPossible = tous.size() / joueursParMatch;
 
-        if (nbMatchsPossible == 0) {
-            throw new IllegalStateException("Pas assez de joueurs pour faire un match");
-        }
-        if (terrains.isEmpty()) {
-            throw new IllegalStateException("Aucun terrain disponible");
-        }
-
-        int nbMatchs = Math.min(nbMatchsPossible, terrains.size());
-        Collections.shuffle(tous);
-
-        for (int i = 0; i < nbMatchs; i++) {
-            Terrain terrain = terrains.get(i);
-
-            Match m = new Match(r, terrain);
-            m.saveInDB(con);
-
-            Equipe e1 = m.getEquipe1();
-            Equipe e2 = m.getEquipe2();
-
-            for (int j = 0; j < tailleEquipe; j++) {
-                Joueur j1 = tous.remove(0);
-                Joueur j2 = tous.remove(0);
-                e1.ajouterJoueur(j1);
-                e2.ajouterJoueur(j2);
-            }
-
-            // IMPORTANT : selon ton modèle, Equipe doit être liée au match via id_match/numero
-            // Ici on suppose que Match a déjà créé e1/e2 correctement.
-            e1.saveInDB(con);
-            e1.saveJoueursDansEquipe(con);
-
-            e2.saveInDB(con);
-            e2.saveJoueursDansEquipe(con);
-
-            // ⚠️ ton getMatchs() est unmodifiable dans ton code actuel ?
-            // Donc ici il vaut mieux avoir une méthode r.ajouterMatch(m) dans Ronde.
-            // Si tu as une liste modifiable dans Ronde, OK :
-            r.getMatchs().add(m);
-        }
+    if (nbMatchsPossible == 0) {
+        throw new IllegalStateException("Pas assez de joueurs pour faire un match");
     }
+    if (terrains.isEmpty()) {
+        throw new IllegalStateException("Aucun terrain disponible");
+    }
+
+    int nbMatchs = Math.min(nbMatchsPossible, terrains.size());
+    Collections.shuffle(tous);
+
+    for (int i = 0; i < nbMatchs; i++) {
+    Terrain terrain = terrains.get(i);
+
+    // 1) créer le match (neuf -> id = -1)
+    Match m = new Match(r, terrain);
+
+    // 2) sauver le match UNE SEULE FOIS (pour obtenir m.getId())
+    m.saveInDB(con);
+
+    // 3) remplir les équipes en mémoire
+    Equipe e1 = m.getEquipe1();
+    Equipe e2 = m.getEquipe2();
+
+    for (int j = 0; j < tailleEquipe; j++) {
+        Joueur j1 = tous.remove(0);
+        Joueur j2 = tous.remove(0);
+        e1.ajouterJoueur(j1);
+        e2.ajouterJoueur(j2);
+    }
+
+    // 4) sauver équipes + match_joueur (UNE SEULE méthode)
+    m.saveEquipesEtJoueurs(con);
+
+    // 5) ajouter le match à la ronde
+    r.ajouterMatch(m);
+}
+
+}
+
+public void clearTerrains() {
+    this.terrains.clear();
+}
+
+public void clearJoueurs() {
+    this.joueurs.clear();
+}
 
     private int computeScore(Joueur j) {
         // TODO : sommer les scores obtenus dans tous les matchs via Match_Joueur

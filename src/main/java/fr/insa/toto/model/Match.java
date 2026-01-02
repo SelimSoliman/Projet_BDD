@@ -204,13 +204,49 @@ public class Match extends ClasseMiroir {
         return res;
     }
 
-    public static void supprimer(Connection con, int id) throws SQLException {
-        String sql = "DELETE FROM matchs WHERE id = ?";
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, id);
+   public static void supprimer(Connection con, int idMatch) throws SQLException {
+    boolean oldAutoCommit = con.getAutoCommit();
+    con.setAutoCommit(false);
+    try {
+        // 1) supprimer les affectations joueurs -> match (FK vers matchs)
+        try (PreparedStatement ps = con.prepareStatement(
+                "DELETE FROM match_joueur WHERE id_match = ?")) {
+            ps.setInt(1, idMatch);
             ps.executeUpdate();
         }
+
+        // 2) supprimer les equipes du match (FK vers matchs)
+        try (PreparedStatement ps = con.prepareStatement(
+                "DELETE FROM equipe WHERE id_match = ?")) {
+            ps.setInt(1, idMatch);
+            ps.executeUpdate();
+        }
+
+        // 3) supprimer le match
+        try (PreparedStatement ps = con.prepareStatement(
+                "DELETE FROM matchs WHERE id = ?")) {
+            ps.setInt(1, idMatch);
+            ps.executeUpdate();
+        }
+
+        con.commit();
+    } catch (SQLException e) {
+        con.rollback();
+        throw e;
+    } finally {
+        con.setAutoCommit(oldAutoCommit);
     }
+}
+
+public void saveEquipesEtJoueurs(Connection con) throws SQLException {
+    // 1) sauver les équipes (table equipe)
+    equipe1.saveInDB(con);
+    equipe2.saveInDB(con);
+
+    // 2) sauver les affectations (table match_joueur)
+    equipe1.saveJoueursDansEquipe(con);
+    equipe2.saveJoueursDansEquipe(con);
+}
 
     @Override
     public String toString() {

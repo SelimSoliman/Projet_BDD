@@ -447,36 +447,44 @@ private void supprimerMatch() {
 
 
 
-    private void creerRondeSimple() {
-        Ronde r;
-        try {
-            r = tournoiCourant.nouvelleRonde();
-        } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
-            return;
-        }
-        try {
-            r.saveInDB(con);
-
-            // recharger tous les joueurs existants du tournoi
-            List<Joueur> joueurs = Joueur.tousLesJoueurs(con);
-            for (Joueur j : joueurs) {
-                tournoiCourant.ajouterJoueur(j);
-            }
-
-            tournoiCourant.creerMatchsPourRonde(r, 2, con);
-
-            System.out.println("Ronde " + r.getNumero() + " creee avec "
-                    + r.getMatchs().size() + " match(s).");
-
-            afficherMatchsRonde(r);
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (IllegalStateException e) {
-            System.out.println("Impossible de creer les matchs : " + e.getMessage());
-        }
+private void creerRondeSimple() {
+    Ronde r;
+    try {
+        r = tournoiCourant.nouvelleRonde();
+    } catch (IllegalStateException e) {
+        System.out.println(e.getMessage());
+        return;
     }
+
+    try {
+        r.saveInDB(con);
+
+        // recharger joueurs
+        tournoiCourant.clearJoueurs();
+        for (Joueur j : Joueur.tousLesJoueurs(con)) {
+            tournoiCourant.ajouterJoueur(j);
+        }
+
+        // recharger terrains
+        tournoiCourant.clearTerrains();
+        for (Terrain t : Terrain.tousLesTerrains(con)) {
+            tournoiCourant.ajouterTerrain(t);
+        }
+
+        tournoiCourant.creerMatchsPourRonde(r, 2, con);
+
+        System.out.println("Ronde " + r.getNumero() + " creee avec "
+                + r.getMatchs().size() + " match(s).");
+        afficherMatchsRonde(r);
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    } catch (IllegalStateException e) {
+        System.out.println("Impossible de creer les matchs : " + e.getMessage());
+    }
+}
+
+
 
     private void afficherMatchsRonde(Ronde r) {
         System.out.println("\nMatchs de la ronde " + r.getNumero() + " :");
@@ -603,17 +611,27 @@ private void supprimerMatch() {
         }
     }
 
-    private void listerTerrains() {
-        if (tournoiCourant == null) {
-            System.out.println("Aucun tournoi courant.");
+   private void listerTerrains() {
+    try {
+        List<Terrain> terrains = Terrain.tousLesTerrains(con);
+        if (terrains.isEmpty()) {
+            System.out.println("Terrains du tournoi :");
+            System.out.println("(aucun terrain en base)");
             return;
         }
         System.out.println("Terrains du tournoi :");
-        for (Terrain t : tournoiCourant.getTerrains()) {
+        for (Terrain t : terrains) {
             System.out.println(" " + t.getId() + " | " + t.getNom()
                     + " | " + (t.estDisponible() ? "disponible" : "occupe"));
         }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        System.out.println("Erreur lors de la recuperation des terrains.");
     }
+}
+
+
+
 
     private void creerTerrain() {
         System.out.print("Nom du terrain : ");
@@ -640,9 +658,8 @@ private void supprimerMatch() {
     int choix = -1;
     while (choix != 0) {
         System.out.println("\n=== Equipes (admin) ===");
-        System.out.println("1. Creer une equipe avec joueurs aleatoires");
+        System.out.println("1. Lister toutes les equipes");
         System.out.println("2. Supprimer une equipe");
-        System.out.println("3. Lister toutes les equipes");
         System.out.println("0. Retour");
         System.out.print("Votre choix : ");
         try {
@@ -651,69 +668,16 @@ private void supprimerMatch() {
             choix = -1;
         }
         switch (choix) {
-            case 1 -> creerEquipeAleatoire();
+            case 1 -> listerEquipes();
             case 2 -> supprimerEquipe();
-            case 3 -> listerEquipes();
             case 0 -> { }
             default -> System.out.println("Choix invalide");
         }
     }
 }
 
-   private void creerEquipeAleatoire() {
-    // recharger les joueurs depuis la base
-    try {
-        List<Joueur> joueursEnBase = Joueur.tousLesJoueurs(con);
-        // vider et remplir la liste du tournoi
-        for (Joueur j : joueursEnBase) {
-            tournoiCourant.ajouterJoueur(j);
-        }
-    } catch (SQLException ex) {
-        ex.printStackTrace();
-        System.out.println("Erreur lors du chargement des joueurs.");
-        return;
-    }
 
-    if (tournoiCourant.getJoueurs().isEmpty()) {
-        System.out.println("Aucun joueur disponible. Ajoutez d'abord des joueurs.");
-        return;
-    }
-
-    System.out.print("Nombre de joueurs dans l'equipe : ");
-    int nbJoueurs;
-    try {
-        nbJoueurs = Integer.parseInt(in.nextLine());
-    } catch (NumberFormatException ex) {
-        System.out.println("Nombre invalide.");
-        return;
-    }
-
-    if (nbJoueurs <= 0 || nbJoueurs > tournoiCourant.getJoueurs().size()) {
-        System.out.println("Nombre de joueurs invalide (dispo: " 
-                + tournoiCourant.getJoueurs().size() + ").");
-        return;
-    }
-
-    // melanger les joueurs
-    List<Joueur> joueursDispos = new java.util.ArrayList<>(tournoiCourant.getJoueurs());
-    java.util.Collections.shuffle(joueursDispos);
-
-    try {
-        Equipe e = new Equipe();
-        e.saveInDB(con);
-
-        // ajouter les joueurs a l'equipe
-        for (int i = 0; i < nbJoueurs; i++) {
-            e.ajouterJoueur(joueursDispos.get(i));
-        }
-
-        System.out.println("Equipe creee (id=" + e.getId() + ") avec " + nbJoueurs + " joueurs.");
-    } catch (SQLException ex) {
-        ex.printStackTrace();
-        System.out.println("Erreur lors de la creation de l'equipe.");
-    }
-}
-
+   
 private void supprimerEquipe() {
     listerEquipes();
     

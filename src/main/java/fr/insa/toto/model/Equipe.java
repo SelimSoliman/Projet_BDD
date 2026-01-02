@@ -105,6 +105,10 @@ public Equipe(int id) {
 
     @Override
 protected PreparedStatement saveSansId(Connection con) throws SQLException {
+    if (this.match == null || this.match.getId() == -1) {
+    throw new IllegalStateException("Equipe sans match sauvegarde (id_match invalide)");
+}
+
     String sql = """
         INSERT INTO equipe (id_match, numero, score)
         VALUES (?, ?, ?)
@@ -113,11 +117,8 @@ protected PreparedStatement saveSansId(Connection con) throws SQLException {
         con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
     // si match est null, on met NULL en base
-    if (this.match != null) {
-        ps.setInt(1, this.match.getId());
-    } else {
-        ps.setNull(1, java.sql.Types.INTEGER);
-    }
+    ps.setInt(1, this.match.getId());
+
     
     ps.setInt(2, this.numero);
     ps.setInt(3, this.score);
