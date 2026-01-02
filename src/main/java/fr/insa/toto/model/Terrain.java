@@ -91,22 +91,22 @@ public class Terrain extends ClasseMiroir {
         }
     }
 
-    // ✅ Méthode utile pour NewRonde : récupérer tous les terrains
-    public static List<Terrain> tousLesTerrains(Connection con) throws SQLException {
-        List<Terrain> res = new ArrayList<>();
-        String sql = "select id, nom, disponible from terrain order by id";
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                res.add(new Terrain(
-                        rs.getInt("id"),
-                        rs.getString("nom"),
-                        rs.getBoolean("disponible")
-                ));
-            }
+    
+   public static List<Terrain> tousLesTerrains(Connection con) throws SQLException {
+    List<Terrain> res = new java.util.ArrayList<>();
+    String sql = "SELECT id, nom, disponible FROM terrain ORDER BY id";
+    try (PreparedStatement ps = con.prepareStatement(sql);
+         ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+            Terrain t = new Terrain(rs.getInt("id"),
+                                   rs.getString("nom"),
+                                   rs.getBoolean("disponible"));
+            res.add(t);
         }
-        return res;
     }
+    return res;
+}
+
 
     @Override
     public String toString() {
