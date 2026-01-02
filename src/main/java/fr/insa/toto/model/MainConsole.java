@@ -119,24 +119,30 @@ public class MainConsole {
     // ================== TOURNOI UNIQUE ==================
 
     private void creerTournoiFixe() {
-        if (tournoiCourant != null) {
-            System.out.println("Un tournoi existe deja.");
-            return;
-        }
-        String nom = "Tournoi principal";
-        System.out.print("Nombre de terrains : ");
-        int nbTerrains = Integer.parseInt(in.nextLine());
-        System.out.print("Nombre de joueurs par equipe : ");
-        int nbJoueursParEquipe = Integer.parseInt(in.nextLine());
-
-        this.tournoiCourant = new Tournoi(nom, nbTerrains);
-        try {
-            tournoiCourant.saveInDB(con);
-            System.out.println("Tournoi '" + nom + "' cree et sauvegarde.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    if (tournoiCourant != null) {
+        System.out.println("Un tournoi existe deja.");
+        return;
     }
+
+    String nom = "Tournoi principal";
+
+    System.out.print("Nombre de terrains : ");
+    int nbTerrains = Integer.parseInt(in.nextLine());
+
+    System.out.print("Nombre de joueurs par equipe : ");
+    int nbJoueursParEquipe = Integer.parseInt(in.nextLine());
+
+    this.tournoiCourant = new Tournoi(nom, nbTerrains);
+    this.tournoiCourant.setNbJoueursParEquipe(nbJoueursParEquipe); // <-- correction
+
+    try {
+        tournoiCourant.saveInDB(con);
+        System.out.println("Tournoi '" + nom + "' cree et sauvegarde.");
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
 
     // ================== JOUEURS (ADMIN) ==================
 
@@ -471,7 +477,8 @@ private void creerRondeSimple() {
             tournoiCourant.ajouterTerrain(t);
         }
 
-        tournoiCourant.creerMatchsPourRonde(r, 2, con);
+        tournoiCourant.creerMatchsPourRonde(r, tournoiCourant.getNbJoueursParEquipe(), con);
+
 
         System.out.println("Ronde " + r.getNumero() + " creee avec "
                 + r.getMatchs().size() + " match(s).");
@@ -513,32 +520,102 @@ private void creerRondeSimple() {
     }
 
     private void saisirResultatMatch() {
-        System.out.println("Saisie de resultat de match : a implementer.");
+    if (tournoiCourant == null) {
+        System.out.println("Aucun tournoi courant.");
+        return;
     }
+    if (tournoiCourant.getRondes().isEmpty()) {
+        System.out.println("Aucune ronde.");
+        return;
+    }
+
+    // 1) prendre la dernière ronde
+    Ronde r = tournoiCourant.getRondes().get(tournoiCourant.getRondes().size() - 1);
+
+    // 2) afficher les matchs de la ronde (avec id)
+    afficherMatchsRonde(r);
+
+    System.out.print("Id du match a cloturer : ");
+    int matchId;
+    try {
+        matchId = Integer.parseInt(in.nextLine());
+    } catch (NumberFormatException ex) {
+        System.out.println("Id invalide.");
+        return;
+    }
+
+    // 3) demander scores
+    System.out.print("Score equipe 1 : ");
+    int s1;
+    try {
+        s1 = Integer.parseInt(in.nextLine());
+    } catch (NumberFormatException ex) {
+        System.out.println("Score invalide.");
+        return;
+    }
+
+    System.out.print("Score equipe 2 : ");
+    int s2;
+    try {
+        s2 = Integer.parseInt(in.nextLine());
+    } catch (NumberFormatException ex) {
+        System.out.println("Score invalide.");
+        return;
+    }
+
+    // 4) update BDD + éventuellement close ronde
+    try {
+        Match.cloturerMatch(con, matchId, s1, s2);
+
+        int rondeId = Match.findRondeIdDuMatch(con, matchId);
+        boolean rondeClose = Ronde.tryCloseRonde(con, rondeId);
+
+        System.out.println("Match " + matchId + " cloture (" + s1 + " - " + s2 + ").");
+        if (rondeClose) {
+            System.out.println("Tous les matchs sont clos : la ronde est maintenant close.");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        System.out.println("Erreur lors de la cloture du match.");
+    }
+}
+
 
     private void cloreDerniereRonde() {
-        List<Ronde> rondes = tournoiCourant.getRondes();
-        if (rondes.isEmpty()) {
-            System.out.println("Aucune ronde.");
-            return;
-        }
-
-        Ronde derniere = rondes.get(rondes.size() - 1);
-        if (derniere.isClose()) {
-            System.out.println("La ronde " + derniere.getNumero() + " est deja close.");
-            return;
-        }
-
-        derniere.clore();
-
-        try {
-            derniere.updateInDB(con);
-            System.out.println("Ronde " + derniere.getNumero() + " close.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            System.out.println("Erreur lors de la mise a jour de la ronde en base.");
-        }
+    if (tournoiCourant == null) {
+        System.out.println("Aucun tournoi courant.");
+        return;
     }
+    if (tournoiCourant.getRondes().isEmpty()) {
+        System.out.println("Aucune ronde.");
+        return;
+    }
+
+    Ronde r = tournoiCourant.getRondes().get(tournoiCourant.getRondes().size() - 1);
+
+    // Si déjà close
+    if (r.isClose()) {
+        System.out.println("La ronde " + r.getNumero() + " est deja close.");
+        return;
+    }
+
+    try {
+        // Tente de clore seulement si tous les matchs sont clos
+        boolean closeOk = Ronde.tryCloseRonde(con, r.getId());
+
+        if (closeOk) {
+            // si tu gardes l'objet en mémoire, tu peux aussi le marquer close
+            
+            System.out.println("Ronde " + r.getNumero() + " close.");
+        } else {
+            System.out.println("Impossible : tous les matchs ne sont pas encore clos.");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        System.out.println("Erreur lors de la cloture de la ronde.");
+    }
+}
+
 
     private void listerRondes() {
         if (tournoiCourant == null) {
@@ -728,13 +805,105 @@ private void supprimerEquipe() {
     // ================== CONSULTATION (ADMIN + UTILISATEUR) ==================
 
     private void afficherInfosTournoi() {
-        if (tournoiCourant == null) {
-            System.out.println("Aucun tournoi courant (creez-le cote admin).");
+        chargerTournoiDepuisBD();
+
+    if (tournoiCourant == null) {
+        System.out.println("Aucun tournoi courant (creez-le cote admin).");
+        return;
+    }
+
+    System.out.println("\n=== Informations sur le tournoi ===");
+    System.out.println("Nom : " + tournoiCourant.getNom());
+    System.out.println("Nombre de joueurs : " + tournoiCourant.getJoueurs().size());
+    System.out.println("Nombre de rondes : " + tournoiCourant.getRondes().size());
+    System.out.println("\n=== Rondes & resultats ===");
+    afficherRondesEtResultats();
+
+
+    // --- CLASSEMENT ACTUEL (exigé par le sujet) ---
+    System.out.println("\nClassement actuel :");
+    try {
+        List<Joueur> classement = tournoiCourant.classementJoueurs(con);
+        if (classement.isEmpty()) {
+            System.out.println("(aucun joueur)");
+        } else {
+            for (Joueur j : classement) {
+                int score = tournoiCourant.computeScore(j, con); // on réutilise la même requête
+                System.out.println(" - " + j.getSurnom() + " : " + score);
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        System.out.println("Erreur lors du calcul du classement.");
+    }
+}
+private void afficherRondesEtResultats() {
+    if (tournoiCourant == null) {
+        System.out.println("(aucun tournoi)");
+        return;
+    }
+
+    try {
+        List<Ronde> rondes = Ronde.toutesLesRondes(con, tournoiCourant);
+        if (rondes.isEmpty()) {
+            System.out.println("(aucune ronde)");
             return;
         }
-        System.out.println("\n=== Informations sur le tournoi ===");
-        System.out.println("Nom : " + tournoiCourant.getNom());
-        System.out.println("Nombre de joueurs : " + tournoiCourant.getJoueurs().size());
-        System.out.println("Nombre de rondes : " + tournoiCourant.getRondes().size());
+
+        for (Ronde r : rondes) {
+            System.out.println("\nRonde " + r.getNumero()
+                    + " | statut: " + (r.isClose() ? "close" : "en cours"));
+
+            List<Match> matchs = Match.matchsDeRonde(con, r.getId());
+            if (matchs.isEmpty()) {
+                System.out.println("  (aucun match)");
+            } else {
+                for (Match m : matchs) {
+                    System.out.println("  - Match " + m.getId()
+                            + " | " + m.getStatut()
+                            + " | score: " + m.getScoreEquipe1() + "-" + m.getScoreEquipe2());
+                }
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        System.out.println("Erreur lors de la consultation rondes/matchs.");
     }
+}
+
+private void chargerTournoiDepuisBD() {
+    try {
+        Tournoi t = Tournoi.getUnique(con); // ou getTournoiUnique(con) selon ton code
+        if (t == null) {
+            this.tournoiCourant = null;
+            return;
+        }
+
+        // le tournoi courant devient celui de la BD
+        this.tournoiCourant = t;
+
+        // recharger les listes en mémoire
+        this.tournoiCourant.clearJoueurs();
+        for (Joueur j : Joueur.tousLesJoueurs(con)) {
+            this.tournoiCourant.ajouterJoueur(j);
+        }
+
+        this.tournoiCourant.clearTerrains();
+        for (Terrain ter : Terrain.tousLesTerrains(con)) {
+            this.tournoiCourant.ajouterTerrain(ter);
+        }
+
+        // IMPORTANT : recharger les rondes + leurs matchs depuis la BD
+        // Si tu n’as pas encore ces méthodes, on les ajoute juste après.
+        // si getRondes() renvoie une liste modifiable; sinon voir note
+        for (Ronde r : Ronde.toutesLesRondes(con, this.tournoiCourant)) {
+            this.tournoiCourant.getRondes().add(r);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        this.tournoiCourant = null;
+    }
+}
+
 }

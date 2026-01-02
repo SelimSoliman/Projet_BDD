@@ -210,11 +210,7 @@ public Tournoi(int id, String nom, int nbTerrains, int nbJoueursParEquipe) {
     // Classement joueurs (squelette)
     // =======================
 
-    public List<Joueur> classementJoueurs() {
-        List<Joueur> copie = new ArrayList<>(joueurs);
-        copie.sort(Comparator.comparingInt(this::computeScore).reversed());
-        return copie;
-    }
+   
 
     // =======================
     // Création matchs pour une ronde
@@ -281,10 +277,44 @@ public void clearJoueurs() {
     this.joueurs.clear();
 }
 
-    private int computeScore(Joueur j) {
-        // TODO : sommer les scores obtenus dans tous les matchs via Match_Joueur
-        return 0;
+    public int computeScore(Joueur j, Connection con) throws SQLException {
+    String sql = """
+        SELECT COALESCE(SUM(e.score), 0) AS total
+        FROM match_joueur mj
+        JOIN equipe e
+          ON e.id_match = mj.id_match
+         AND e.numero = mj.numero_equipe
+        WHERE mj.id_joueur = ?
+        """;
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, j.getId());
+        try (ResultSet rs = ps.executeQuery()) {
+            rs.next();
+            return rs.getInt("total");
+        }
     }
+}
+
+public List<Joueur> classementJoueurs(Connection con) {
+    List<Joueur> copie = new ArrayList<>(this.joueurs);
+
+    copie.sort(new Comparator<Joueur>() {
+        @Override
+        public int compare(Joueur a, Joueur b) {
+            try {
+                return Integer.compare(computeScore(b, con), computeScore(a, con)); // desc
+
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    });
+
+    return copie;
+}
+
+
+
 
 public int genererMatchsPourRonde(Ronde r, Connection con) throws SQLException {
 

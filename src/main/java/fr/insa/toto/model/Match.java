@@ -248,6 +248,34 @@ public void saveEquipesEtJoueurs(Connection con) throws SQLException {
     equipe2.saveJoueursDansEquipe(con);
 }
 
+public static List<Match> matchsDeRonde(Connection con, int rondeId) throws SQLException {
+    List<Match> res = new ArrayList<>();
+
+    String sql = """
+        SELECT id, terrain_id, score_e1, score_e2, statut
+        FROM matchs
+        WHERE ronde_id = ?
+        ORDER BY id
+        """;
+
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, rondeId);
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                res.add(new Match(
+                        rs.getInt("id"),
+                        null,  // ronde non chargée
+                        null,  // terrain non chargé
+                        rs.getInt("score_e1"),
+                        rs.getInt("score_e2"),
+                        Statut.valueOf(rs.getString("statut"))
+                ));
+            }
+        }
+    }
+    return res;
+}
+
     @Override
     public String toString() {
         String nomTerrain = (terrain == null) ? "aucun terrain" : terrain.getNom();

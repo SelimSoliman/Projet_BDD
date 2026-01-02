@@ -152,7 +152,32 @@ public void updateInDB(Connection con) throws SQLException {
                 + ", " + (close ? "close" : "en cours")
                 + ", " + matchs.size() + " matchs)";
     }  
-   
+   public static List<Ronde> toutesLesRondes(Connection con, Tournoi t) throws SQLException {
+    List<Ronde> res = new ArrayList<>();
+    String sql = """
+        SELECT id, numero, debut, close
+        FROM ronde
+        WHERE id_tournoi = ?
+        ORDER BY numero
+        """;
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, t.getId());
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Ronde r = new Ronde(
+                        rs.getInt("id"),
+                        t,
+                        rs.getInt("numero"),
+                        rs.getTimestamp("debut").toLocalDateTime(),
+                        rs.getBoolean("close")
+                );
+                res.add(r);
+            }
+        }
+    }
+    return res;
+}
+
 
     
 
