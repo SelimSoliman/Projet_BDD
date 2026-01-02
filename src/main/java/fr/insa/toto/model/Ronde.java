@@ -3,13 +3,39 @@ package fr.insa.toto.model;
 import fr.insa.beuvron.utils.database.ClasseMiroir;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
+
 public class Ronde extends ClasseMiroir {
+    
+public static boolean tryCloseRonde(Connection con, int rondeId) throws SQLException {
+    String sql = "SELECT COUNT(*) FROM matchs WHERE ronde_id = ? AND statut = ?";
+    int nbEnCours = 0;
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, rondeId);
+        ps.setString(2, Match.Statut.EN_COURS.name());
+        try (ResultSet rs = ps.executeQuery()) {
+           if (rs.next()) nbEnCours = rs.getInt(1);
+
+        }
+    }
+
+    if (nbEnCours == 0) {
+        try (PreparedStatement ps2 = con.prepareStatement("UPDATE ronde SET close = TRUE WHERE id = ?")) {
+            ps2.setInt(1, rondeId);
+            ps2.executeUpdate();
+        }
+        return true;
+    }
+    return false;
+}
+
 
     // --- attributs BD ---
     private Tournoi tournoi;              // tournoi auquel appartient la ronde
@@ -37,6 +63,30 @@ public class Ronde extends ClasseMiroir {
         this.debut = debut;
         this.close = close;
     }
+     public static Ronde findDerniereRonde(Connection con, Tournoi t) throws SQLException {
+    String sql = """
+        select id, numero, debut, close
+        from ronde
+        where id_tournoi = ?
+        order by numero desc
+        limit 1
+        """;
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, t.getId());
+        var rs = ps.executeQuery();
+        if (rs.next()) {
+            return new Ronde(
+                rs.getInt("id"),
+                t,
+                rs.getInt("numero"),
+                rs.getTimestamp("debut").toLocalDateTime(),
+                rs.getBoolean("close")
+            );
+        } else {
+            return null;
+        }
+    }
+}
 
     // ----------- GETTERS / SETTERS -----------
 
@@ -101,5 +151,10 @@ public void updateInDB(Connection con) throws SQLException {
                 + " (debut : " + debut
                 + ", " + (close ? "close" : "en cours")
                 + ", " + matchs.size() + " matchs)";
-    }
+    }  
+   
+
+    
+
+
 }

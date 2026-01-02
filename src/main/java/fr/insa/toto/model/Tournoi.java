@@ -1,5 +1,6 @@
 package fr.insa.toto.model;
 
+import com.vaadin.flow.component.sidenav.SideNavItem;
 import fr.insa.beuvron.utils.database.ClasseMiroir;
 
 import java.sql.Connection;
@@ -16,6 +17,10 @@ import java.util.List;
 public class Tournoi extends ClasseMiroir {
 
     private static final int TAILLE_EQUIPE_FIXE = 2;
+
+    public static void addItem(SideNavItem resultatMatch) {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
 
     // --- paramètres généraux ---
     private String nom;
@@ -34,7 +39,30 @@ public class Tournoi extends ClasseMiroir {
         this.nbTerrains = nbTerrains;
         this.nbJoueursParEquipe = TAILLE_EQUIPE_FIXE;
     }
+    // Constructeur pour un tournoi récupéré depuis la BD
+public Tournoi(int id, String nom, int nbTerrains, int nbJoueursParEquipe) {
+    super(id);
+    this.nom = nom;
+    this.nbTerrains = nbTerrains;
+    this.nbJoueursParEquipe = nbJoueursParEquipe;
+}
 
+ public static Tournoi getTournoiUnique(Connection con) throws SQLException {
+    String sql = "select id, nom, nb_terrains, nb_joueurs_par_equipe from tournoi limit 1";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        var rs = ps.executeQuery();
+        if (rs.next()) {
+            return new Tournoi(
+                rs.getInt("id"),
+                rs.getString("nom"),
+                rs.getInt("nb_terrains"),
+                rs.getInt("nb_joueurs_par_equipe")
+            );
+        } else {
+            return null;
+        }
+    }
+}
     // =======================
     // Persistance (INSERT)
     // =======================
@@ -58,19 +86,30 @@ public class Tournoi extends ClasseMiroir {
     // =======================
 
     /** Récupère le tournoi unique (hypothèse du sujet) */
-    public static Tournoi getUnique(Connection con) throws SQLException {
-        String sql = "select id, nom, nb_terrains, nb_joueurs_par_equipe from tournoi limit 1";
-        try (PreparedStatement pst = con.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
+    public Tournoi(int id, String nom, int nbTerrains) {
+    super(id); // <-- c'est ça qui fixe l'id
+    this.nom = nom;
+    this.nbTerrains = nbTerrains;
+    this.nbJoueursParEquipe = TAILLE_EQUIPE_FIXE;
+}
 
-            if (!rs.next()) return null;
+  public static Tournoi getUnique(Connection con) throws SQLException {
+    String sql = "select id, nom, nb_terrains, nb_joueurs_par_equipe from tournoi limit 1";
+    try (PreparedStatement pst = con.prepareStatement(sql);
+         ResultSet rs = pst.executeQuery()) {
 
-            Tournoi t = new Tournoi(rs.getString("nom"), rs.getInt("nb_terrains"));
-            t.setId(rs.getInt("id"));
-            t.setNbJoueursParEquipe(rs.getInt("nb_joueurs_par_equipe"));
-            return t;
-        }
+        if (!rs.next()) return null;
+
+        Tournoi t = new Tournoi(
+            rs.getInt("id"),
+            rs.getString("nom"),
+            rs.getInt("nb_terrains")
+        );
+        t.setNbJoueursParEquipe(rs.getInt("nb_joueurs_par_equipe"));
+        return t;
     }
+}
+
 
     /** Met à jour les paramètres du tournoi */
     public void updateInDB(Connection con) throws SQLException {
@@ -241,7 +280,73 @@ public class Tournoi extends ClasseMiroir {
         return 0;
     }
 
-    private void setId(int aInt) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+public int genererMatchsPourRonde(Ronde r, Connection con) throws SQLException {
+
+    // 1) récupérer tous les joueurs depuis la liste déjà chargée dans Tournoi
+    List<Joueur> pool = new ArrayList<>(this.joueurs);
+    Collections.shuffle(pool);
+
+    int tailleEquipe = this.nbJoueursParEquipe;
+    int joueursParMatch = 2 * tailleEquipe;
+
+    // 2) combien de matchs possibles ?
+    int nbMatchsPossible = pool.size() / joueursParMatch;
+    if (nbMatchsPossible == 0) {
+        throw new IllegalStateException("Pas assez de joueurs pour créer un match");
     }
+
+    // 3) on est limité par les terrains dispo (dans ta liste terrains)
+    int nbMatchs = Math.min(nbMatchsPossible, this.terrains.size());
+
+    String sqlInsertMatch = """
+        insert into matchs (ronde_id, terrain_id, score_e1, score_e2, statut)
+        values (?, ?, 0, 0, 'EN_COURS')
+        """;
+
+    String sqlInsertMJ = """
+        insert into match_joueur (id_match, id_joueur, numero_equipe)
+        values (?, ?, ?)
+        """;
+
+    try (
+        PreparedStatement pstMatch = con.prepareStatement(sqlInsertMatch, Statement.RETURN_GENERATED_KEYS);
+        PreparedStatement pstMJ = con.prepareStatement(sqlInsertMJ)
+    ) {
+        for (int i = 0; i < nbMatchs; i++) {
+            Terrain terrain = this.terrains.get(i);
+
+            // 4) créer le match
+            pstMatch.setInt(1, r.getId());
+            pstMatch.setInt(2, terrain.getId());
+            pstMatch.executeUpdate();
+
+            var rsKeys = pstMatch.getGeneratedKeys();
+            rsKeys.next();
+            int idMatch = rsKeys.getInt(1);
+
+            // 5) remplir équipe 1
+            for (int k = 0; k < tailleEquipe; k++) {
+                Joueur j = pool.remove(0);
+                pstMJ.setInt(1, idMatch);
+                pstMJ.setInt(2, j.getId());
+                pstMJ.setInt(3, 1);
+                pstMJ.executeUpdate();
+            }
+
+            // 6) remplir équipe 2
+            for (int k = 0; k < tailleEquipe; k++) {
+                Joueur j = pool.remove(0);
+                pstMJ.setInt(1, idMatch);
+                pstMJ.setInt(2, j.getId());
+                pstMJ.setInt(3, 2);
+                pstMJ.executeUpdate();
+            }
+        }
+    }
+
+    // nb de matchs créés
+    return nbMatchs;
+}
+
+
 }

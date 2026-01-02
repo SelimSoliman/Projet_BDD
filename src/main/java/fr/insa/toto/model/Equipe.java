@@ -10,6 +10,11 @@ import java.util.ArrayList;
 import java.sql.ResultSet;
 
 public class Equipe extends ClasseMiroir {
+    public void setScore(int score) {
+    if (score < 0) throw new IllegalArgumentException("score negatif");
+    this.score = score; // adapte au nom exact de ton attribut
+}
+
 
     private static final int TAILLE_REQUISE = 2;
 
@@ -241,6 +246,8 @@ public static void supprimer(Connection con, int id) throws SQLException {
         ps.executeUpdate();
     }
 }
+
+
 
     // --------- DIVERS ---------
 

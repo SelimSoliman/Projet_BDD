@@ -68,30 +68,31 @@ public class Joueur extends ClasseMiroir {
         return ps;
     }
 
-    public static List<Joueur> tousLesJoueurs(Connection con) throws SQLException {
-        List<Joueur> res = new ArrayList<>();
-        String sql = """
-            SELECT id, surnom, categorie, taillecm, nom, prenom, sexe, date_naissance
-            FROM joueur
-            """;
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                Joueur j = new Joueur(
-                        rs.getInt("id"),
-                        rs.getString("surnom"),
-                        rs.getString("categorie"),
-                        rs.getInt("taillecm"),
-                        rs.getString("nom"),
-                        rs.getString("prenom"),
-                        rs.getString("sexe"),
-                        rs.getDate("date_naissance").toLocalDate()
-                );
-                res.add(j);
-            }
+   public static List<Joueur> tousLesJoueurs(Connection con) throws SQLException {
+    List<Joueur> res = new ArrayList<>();
+    String sql = """
+        SELECT id, surnom, categorie, taillecm, nom, prenom, sexe, date_naissance
+        FROM joueur
+        """;
+    try (PreparedStatement ps = con.prepareStatement(sql);
+         ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+            java.sql.Date d = rs.getDate("date_naissance");
+            res.add(new Joueur(
+                    rs.getInt("id"),
+                    rs.getString("surnom"),
+                    rs.getString("categorie"),
+                    rs.getInt("taillecm"),
+                    rs.getString("nom"),
+                    rs.getString("prenom"),
+                    rs.getString("sexe"),
+                    (d == null) ? null : d.toLocalDate()
+            ));
         }
-        return res;
     }
+    return res;
+}
+
 public static void supprimer(Connection con, int id) throws SQLException {
     String sql = "delete from joueur where id = ?";
     try (PreparedStatement ps = con.prepareStatement(sql)) {

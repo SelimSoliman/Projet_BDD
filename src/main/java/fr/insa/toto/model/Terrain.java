@@ -3,8 +3,11 @@ package fr.insa.toto.model;
 import fr.insa.beuvron.utils.database.ClasseMiroir;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Terrain extends ClasseMiroir {
 
@@ -73,15 +76,36 @@ public class Terrain extends ClasseMiroir {
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
         String sql = "INSERT INTO terrain (nom, disponible) VALUES (?, ?)";
-        PreparedStatement ps =
-            con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-
+        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, this.nom);
         ps.setBoolean(2, this.disponible);
-
-        ps.executeUpdate();    // exécute l'INSERT
-
+        ps.executeUpdate();
         return ps;
+    }
+
+    public static void supprimer(Connection con, int id) throws SQLException {
+        String sql = "delete from terrain where id = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+
+    // ✅ Méthode utile pour NewRonde : récupérer tous les terrains
+    public static List<Terrain> tousLesTerrains(Connection con) throws SQLException {
+        List<Terrain> res = new ArrayList<>();
+        String sql = "select id, nom, disponible from terrain order by id";
+        try (PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                res.add(new Terrain(
+                        rs.getInt("id"),
+                        rs.getString("nom"),
+                        rs.getBoolean("disponible")
+                ));
+            }
+        }
+        return res;
     }
 
     @Override
@@ -89,13 +113,6 @@ public class Terrain extends ClasseMiroir {
         return "Terrain " + getId() + " : " + nom +
                " - " + (disponible ? "Disponible" : "Occupé");
     }
-public static void supprimer(Connection con, int id) throws SQLException {
-    String sql = "delete from terrain where id = ?";
-    try (PreparedStatement ps = con.prepareStatement(sql)) {
-        ps.setInt(1, id);
-        ps.executeUpdate();
-    }
-}
 
     @Override
     public boolean equals(Object obj) {
