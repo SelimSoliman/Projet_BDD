@@ -565,14 +565,13 @@ private void creerRondeSimple() {
 
     // 4) update BDD + éventuellement close ronde
     try {
-        Match.cloturerMatch(con, matchId, s1, s2);
+        boolean rondeClose= Match.validerEtCloturerMatch(con, matchId, s1, s2);
 
-        int rondeId = Match.findRondeIdDuMatch(con, matchId);
-        boolean rondeClose = Ronde.tryCloseRonde(con, rondeId);
+        
 
         System.out.println("Match " + matchId + " cloture (" + s1 + " - " + s2 + ").");
         if (rondeClose) {
-            System.out.println("Tous les matchs sont clos : la ronde est maintenant close.");
+            System.out.println("Si c etait le dernier match ouvert, la ronde a ete close automatiquement");
         }
     } catch (SQLException e) {
         e.printStackTrace();

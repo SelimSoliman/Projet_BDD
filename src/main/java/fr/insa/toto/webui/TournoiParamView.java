@@ -1,5 +1,3 @@
-
-
 package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.button.Button;
@@ -11,10 +9,13 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD; // adapte si ton package est différent
+import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
+import fr.insa.toto.model.Joueur;
 import fr.insa.toto.model.Tournoi;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @Route(value = "tournoi", layout = MainLayout.class)
@@ -26,20 +27,21 @@ public class TournoiParamView extends VerticalLayout {
     private final TextField nom = new TextField("Nom du tournoi");
     private final IntegerField nbTerrains = new IntegerField("Nombre de terrains");
     private final IntegerField nbJoueursParEquipe = new IntegerField("Joueurs par équipe");
+    private final IntegerField nbJoueursInscrits = new IntegerField("Nombre de joueurs");
+    private final IntegerField minJoueursPour1Match = new IntegerField("Minimum joueurs match");
 
     private final Button enregistrer = new Button("Enregistrer");
     private final Button recharger = new Button("Recharger");
 
     private Tournoi tournoi;
 
-    public TournoiParamView() {
-        // 1) Connexion BDD (ne jamais throws dans un constructeur de View Vaadin)
+    public TournoiParamView() throws SQLException {
+        // 1) Connexion BDD
         try {
             this.con = ConnectionSimpleSGBD.defaultCon();
         } catch (SQLException e) {
             Notification.show("Impossible de se connecter à la base : " + e.getMessage());
             e.printStackTrace();
-            // on stoppe proprement : la vue s'affiche mais sans fonctionnalités
             setEnabled(false);
             return;
         }
@@ -48,16 +50,35 @@ public class TournoiParamView extends VerticalLayout {
         setMaxWidth("900px");
         setWidthFull();
 
+        // largeur homogène
+        nom.setWidthFull();
+        nbTerrains.setWidthFull();
+        nbJoueursParEquipe.setWidthFull();
+        nbJoueursInscrits.setWidthFull();
+        minJoueursPour1Match.setWidthFull();
+
         nbTerrains.setMin(1);
         nbJoueursParEquipe.setMin(1);
 
+        // ✅ champs calculés => readOnly (sinon tu tapes 16, puis load() recalcul => ça "change")
+        nbJoueursInscrits.setEnabled(true);
+        nbJoueursInscrits.setValue(Joueur.count(con));
+minJoueursPour1Match.setReadOnly(true);
+
         add(
                 new H2("Paramètres du tournoi"),
-                nom, nbTerrains, nbJoueursParEquipe,
+                nom,
+                nbTerrains,
+                nbJoueursParEquipe,
+                nbJoueursInscrits,
+                minJoueursPour1Match,
                 new HorizontalLayout(enregistrer, recharger)
         );
 
-        // 3) Listeners (gérer les erreurs sans RuntimeException brutale)
+        // ✅ quand on change "joueurs par équipe", on met à jour le minimum
+        nbJoueursParEquipe.addValueChangeListener(e -> refreshMinJoueursPour1Match());
+
+        // 3) Listeners
         recharger.addClickListener(e -> {
             try {
                 load();
@@ -91,11 +112,32 @@ public class TournoiParamView extends VerticalLayout {
         if (tournoi == null) {
             nom.clear();
             nbTerrains.clear();
-            nbJoueursParEquipe.setValue(2); // valeur par défaut
+            nbJoueursParEquipe.setValue(2); // défaut
         } else {
             nom.setValue(tournoi.getNom());
             nbTerrains.setValue(tournoi.getNbTerrains());
             nbJoueursParEquipe.setValue(tournoi.getNbJoueursParEquipe());
+        }
+
+        // ✅ valeur dérivée de la table joueur (pas un "paramètre" à enregistrer)
+        nbJoueursInscrits.setValue(countJoueurs(con));
+        refreshMinJoueursPour1Match();
+    }
+
+    private void refreshMinJoueursPour1Match() {
+        Integer v = nbJoueursParEquipe.getValue();
+        if (v == null || v < 1) {
+            minJoueursPour1Match.clear();
+            return;
+        }
+        minJoueursPour1Match.setValue(2 * v);
+    }
+
+    private int countJoueurs(Connection con) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM joueur");
+             ResultSet rs = ps.executeQuery()) {
+            rs.next();
+            return rs.getInt(1);
         }
     }
 
@@ -108,7 +150,7 @@ public class TournoiParamView extends VerticalLayout {
             Notification.show("Nombre de terrains invalide");
             return;
         }
-        if (nbJoueursParEquipe.getValue() == null || nbJoueursParEquipe.getValue() < 1) {
+       if (nbJoueursParEquipe.getValue() == null || nbJoueursParEquipe.getValue() < 1) {
             Notification.show("Joueurs par équipe invalide");
             return;
         }

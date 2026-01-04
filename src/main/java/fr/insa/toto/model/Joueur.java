@@ -67,6 +67,13 @@ public class Joueur extends ClasseMiroir {
         ps.executeUpdate();
         return ps;
     }
+public static int count(Connection con) throws SQLException {
+    try (PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM joueur");
+         ResultSet rs = ps.executeQuery()) {
+        rs.next();
+        return rs.getInt(1);
+    }
+}
 
    public static List<Joueur> tousLesJoueurs(Connection con) throws SQLException {
     List<Joueur> res = new ArrayList<>();
@@ -124,3 +131,4 @@ public static void supprimer(Connection con, int id) throws SQLException {
     public LocalDate getDateNaissance() { return dateNaissance; }
     public void setDateNaissance(LocalDate dateNaissance) { this.dateNaissance = dateNaissance; }
 }
+
