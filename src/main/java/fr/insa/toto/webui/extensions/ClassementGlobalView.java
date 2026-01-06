@@ -77,7 +77,4 @@ public class ClassementGlobalView extends VerticalLayout {
     }
 }
 
-// =====================================================
-// VUE : Gestion des terrains avec plan (Extension 3)
-// =====================================================
 
