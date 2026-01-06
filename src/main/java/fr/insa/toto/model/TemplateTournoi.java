@@ -113,33 +113,52 @@ public class TemplateTournoi extends ClasseMiroir {
 
     /**
      * Sauvegarde complète du template avec ses associations
+     * IMPORTANT : Appeler cette méthode une seule fois après avoir ajouté 
+     * tous les terrains et types de jeu
      */
     public void saveComplete(Connection con) throws SQLException {
-        // Sauver le template lui-même
+        // Sauver le template lui-même si pas encore sauvegardé
         if (this.getId() == -1) {
             this.saveInDB(con);
         }
 
+        // Nettoyer les associations existantes pour éviter les doublons
+        String sqlDeleteTerrains = "DELETE FROM template_terrain WHERE id_template = ?";
+        try (PreparedStatement ps = con.prepareStatement(sqlDeleteTerrains)) {
+            ps.setInt(1, this.getId());
+            ps.executeUpdate();
+        }
+
+        String sqlDeleteTypeJeu = "DELETE FROM template_type_jeu WHERE id_template = ?";
+        try (PreparedStatement ps = con.prepareStatement(sqlDeleteTypeJeu)) {
+            ps.setInt(1, this.getId());
+            ps.executeUpdate();
+        }
+
         // Sauver les associations terrains
-        String sqlTerrain = "INSERT INTO template_terrain (id_template, id_terrain) VALUES (?, ?)";
-        try (PreparedStatement ps = con.prepareStatement(sqlTerrain)) {
-            for (Integer idTerrain : terrainsIds) {
-                ps.setInt(1, this.getId());
-                ps.setInt(2, idTerrain);
-                ps.addBatch();
+        if (!terrainsIds.isEmpty()) {
+            String sqlTerrain = "INSERT INTO template_terrain (id_template, id_terrain) VALUES (?, ?)";
+            try (PreparedStatement ps = con.prepareStatement(sqlTerrain)) {
+                for (Integer idTerrain : terrainsIds) {
+                    ps.setInt(1, this.getId());
+                    ps.setInt(2, idTerrain);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
             }
-            ps.executeBatch();
         }
 
         // Sauver les associations types de jeu
-        String sqlTypeJeu = "INSERT INTO template_type_jeu (id_template, id_type_jeu) VALUES (?, ?)";
-        try (PreparedStatement ps = con.prepareStatement(sqlTypeJeu)) {
-            for (Integer idTypeJeu : typesJeuIds) {
-                ps.setInt(1, this.getId());
-                ps.setInt(2, idTypeJeu);
-                ps.addBatch();
+        if (!typesJeuIds.isEmpty()) {
+            String sqlTypeJeu = "INSERT INTO template_type_jeu (id_template, id_type_jeu) VALUES (?, ?)";
+            try (PreparedStatement ps = con.prepareStatement(sqlTypeJeu)) {
+                for (Integer idTypeJeu : typesJeuIds) {
+                    ps.setInt(1, this.getId());
+                    ps.setInt(2, idTypeJeu);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
             }
-            ps.executeBatch();
         }
     }
 
@@ -265,13 +284,8 @@ public class TemplateTournoi extends ClasseMiroir {
         );
         nouveau.saveInDB(con);
 
-        // Charger et associer les terrains
-        for (Integer idTerrain : this.terrainsIds) {
-            Terrain t = getTerrain(con, idTerrain);
-            if (t != null) {
-                nouveau.ajouterTerrain(t);
-            }
-        }
+        // Note : Les terrains devront être chargés séparément après création
+        // car TournoiMulti n'a pas de liste de terrains en mémoire dans sa version actuelle
 
         return nouveau;
     }
