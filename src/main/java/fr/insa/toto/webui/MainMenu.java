@@ -14,6 +14,8 @@ public class MainMenu extends SideNav {
 
         SideNavItem utilisateurs = new SideNavItem("Utilisateurs");
         utilisateurs.addItem(new SideNavItem("Liste", ListeUtilisateurs.class));
+       
+
 
         if (SessionInfo.adminConnected()) {
             utilisateurs.addItem(new SideNavItem("Création", CreationAdmin.class));
@@ -25,6 +27,7 @@ public class MainMenu extends SideNav {
             tournoiMenu.addItem(new SideNavItem("Paramètres du tournoi", TournoiParamView.class));
             tournoiMenu.addItem(new SideNavItem("Créer une ronde", NewRonde.class));
             tournoiMenu.addItem(new SideNavItem("Saisir résultat match", MatchResultView.class)); // ✅ ici
+tournoiMenu.addItem(new SideNavItem("Créer un match", MatchCreateView.class));
 
             this.addItem(accueil, utilisateurs, tournoiMenu);
         } else {

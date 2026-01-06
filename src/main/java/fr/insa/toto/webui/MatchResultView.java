@@ -30,13 +30,13 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-
-import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
+import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.Match;
 import fr.insa.toto.model.Ronde;
 import fr.insa.toto.webui.session.SessionInfo;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 @Route(value = "matchs/resultat", layout = MainLayout.class)
@@ -72,11 +72,17 @@ public class MatchResultView extends VerticalLayout {
     }
 
     private void chargerMatchsEnCours() {
-        try (Connection con = ConnectionSimpleSGBD.defaultCon()) {
-            List<fr.insa.toto.model.Match> matchs = Match.matchsEnCoursDeLaDerniereRonde(con);
+        try (Connection con = ConnectionPool.getConnection()) {
+
+            // ⚠️ Utilise bien le nom exact de la méthode dans ta classe Match
+            // Dans ton code, la méthode implémentée s'appelle :
+            // matchsEnCoursDeDerniereRonde (sans "La")
+            List<Match> matchs = Match.matchsEnCoursDeLaDerniereRonde(con);
+
             List<Integer> ids = matchs.stream().map(Match::getId).toList();
             cbMatchId.setItems(ids);
-            if (!ids.isEmpty()) cbMatchId.setValue(ids.get(0));
+            cbMatchId.setValue(ids.isEmpty() ? null : ids.get(0));
+
         } catch (Exception ex) {
             ex.printStackTrace();
             Notification.show("Erreur chargement matchs", 4000, Notification.Position.MIDDLE);
@@ -84,36 +90,56 @@ public class MatchResultView extends VerticalLayout {
     }
 
     private void traiterCloture() {
-        Integer idMatch = cbMatchId.getValue();
-        if (idMatch == null) {
+        Integer matchId = cbMatchId.getValue();
+        if (matchId == null) {
             Notification.show("Choisis un match.", 3000, Notification.Position.MIDDLE);
             return;
         }
+
         if (score1.getValue() == null || score2.getValue() == null) {
             Notification.show("Renseigne les 2 scores.", 3000, Notification.Position.MIDDLE);
             return;
         }
 
-        try (Connection con = ConnectionSimpleSGBD.defaultCon()) {
-            Match.cloturerMatch(con, idMatch, score1.getValue(), score2.getValue());
+        int s1 = score1.getValue();
+        int s2 = score2.getValue();
 
-            int rondeId = Match.findRondeIdDuMatch(con, idMatch);
+try (Connection con = ConnectionPool.getConnection()) {
 
-            boolean rondeFermee = (rondeId != -1) && Ronde.tryCloseRonde(con, rondeId);
+    boolean rondeFermee = Match.validerEtCloturerMatch(con, matchId, s1, s2);
 
-            if (rondeFermee) {
-                Notification.show("Match clôturé. ✅ Ronde clôturée automatiquement !", 4000, Notification.Position.MIDDLE);
-            } else {
-                Notification.show("Match clôturé. (La ronde continue)", 3500, Notification.Position.MIDDLE);
-            }
-
-            chargerMatchsEnCours();
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            Notification.show("Erreur clôture match", 5000, Notification.Position.MIDDLE);
-        }
+    if (rondeFermee) {
+        Notification.show(
+            "Match clôturé ✅ + ronde clôturée automatiquement",
+            4000,
+            Notification.Position.MIDDLE
+        );
+    } else {
+        Notification.show(
+            "Match clôturé",
+            3000,
+            Notification.Position.MIDDLE
+        );
     }
-}
+   
+
+    chargerMatchsEnCours();
+
+} catch (SQLException ex) {
+    ex.printStackTrace();
+    Notification.show(
+        "Erreur : " + ex.getMessage(),
+        5000,
+        Notification.Position.MIDDLE
+    );
+}}}
+
+
+
+       
+  
+
+
+
 
   

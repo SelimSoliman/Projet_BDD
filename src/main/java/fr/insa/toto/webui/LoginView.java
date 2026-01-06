@@ -58,6 +58,9 @@ public class LoginView extends VerticalLayout {
             String pass = e.getPassword();
 
             try (Connection con = ConnectionPool.getConnection()) {
+               
+
+
                 Optional<Utilisateur> trouve = Utilisateur.findBySurnomPass(con, surnom, pass);
 
                 if (trouve.isEmpty()) {
