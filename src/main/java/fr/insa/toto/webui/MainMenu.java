@@ -8,38 +8,29 @@ import fr.insa.toto.webui.utilisateurs.ListeUtilisateurs;
 import fr.insa.toto.webui.joueurs.InterfaceJoueurView;
 import fr.insa.toto.webui.extensions.*;
 
-/**
- * Menu principal avec toutes les extensions intégrées
- */
+// ⚠️ IMPORTANT : mets ici le BON import de NewRonde selon ton projet
+// Si ta classe est dans fr.insa.toto.webui.NewRonde, utilise :
+import fr.insa.toto.webui.utilisateurs.NewRonde;
+// (et supprime l'import fr.insa.toto.webui.utilisateurs.NewRonde si tu l'avais)
+
 public class MainMenu extends SideNav {
 
     public MainMenu() {
 
-        // ===== ACCUEIL =====
+        // ACCUEIL
         SideNavItem accueil = new SideNavItem("Accueil", VuePrincipale.class);
 
-        // ===== UTILISATEURS =====
+        // UTILISATEURS
         SideNavItem utilisateurs = new SideNavItem("Utilisateurs");
         utilisateurs.addItem(new SideNavItem("Liste", ListeUtilisateurs.class));
-
         if (SessionInfo.adminConnected()) {
             utilisateurs.addItem(new SideNavItem("Création", CreationAdmin.class));
         }
 
-        // ===== MON ESPACE JOUEUR (Extension 1) =====
-        SideNavItem monEspace = null;
-        if (SessionInfo.userConnected()) {
-            monEspace = new SideNavItem("Mon Espace Joueur", InterfaceJoueurView.class);
-        }
-
-        // ===== TOURNOIS =====
+        // TOURNOIS
         SideNavItem tournois = new SideNavItem("Tournois");
-        
-        // Extension 2 : Multi-tournoi
         tournois.addItem(new SideNavItem("Liste des tournois", ListeTournoisView.class));
         tournois.addItem(new SideNavItem("Classement global", ClassementGlobalView.class));
-
-        // Admin only
         if (SessionInfo.adminConnected()) {
             tournois.addItem(new SideNavItem("Paramètres", TournoiParamView.class));
             tournois.addItem(new SideNavItem("Créer une ronde", NewRonde.class));
@@ -47,50 +38,31 @@ public class MainMenu extends SideNav {
             tournois.addItem(new SideNavItem("Créer un match", MatchCreateView.class));
         }
 
-        // ===== TERRAINS (Extension 3) =====
+        // TERRAINS
         SideNavItem terrains = new SideNavItem("Terrains");
-        
         if (SessionInfo.adminConnected()) {
             terrains.addItem(new SideNavItem("Gestion avec plan", GestionTerrainsView.class));
         }
 
-        // ===== TYPES DE JEU (Extensions 4-5) =====
-        SideNavItem typesJeu = null;
+        // On assemble SANS NULL
+        this.addItem(accueil, utilisateurs);
+
+        if (SessionInfo.userConnected()) {
+            this.addItem(new SideNavItem("Mon Espace Joueur", InterfaceJoueurView.class));
+        }
+
+        this.addItem(tournois);
+
         if (SessionInfo.adminConnected()) {
-            typesJeu = new SideNavItem("Types de Jeu");
+            this.addItem(terrains);
+
+            SideNavItem typesJeu = new SideNavItem("Types de Jeu");
             typesJeu.addItem(new SideNavItem("Gestion", GestionTypesJeuView.class));
-        }
+            this.addItem(typesJeu);
 
-        // ===== TEMPLATES (Extension 6) =====
-        SideNavItem templates = null;
-        if (SessionInfo.adminConnected()) {
-            templates = new SideNavItem("Templates");
+            SideNavItem templates = new SideNavItem("Templates");
             templates.addItem(new SideNavItem("Gestion des templates", GestionTemplatesView.class));
-        }
-
-        // ===== ASSEMBLAGE DU MENU =====
-        if (SessionInfo.adminConnected()) {
-            // Menu complet pour admin
-            this.addItem(
-                accueil,
-                utilisateurs,
-                monEspace,
-                tournois,
-                terrains,
-                typesJeu,
-                templates
-            );
-        } else if (SessionInfo.userConnected()) {
-            // Menu pour utilisateur simple
-            this.addItem(
-                accueil,
-                utilisateurs,
-                monEspace,
-                tournois  // Consultation uniquement
-            );
-        } else {
-            // Menu minimal pour visiteur
-            this.addItem(accueil, utilisateurs);
+            this.addItem(templates);
         }
     }
 }

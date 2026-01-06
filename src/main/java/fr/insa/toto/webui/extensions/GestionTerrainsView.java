@@ -13,8 +13,11 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
+import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.*;
+import fr.insa.toto.webui.MainLayout;
 import fr.insa.toto.webui.session.SessionInfo;
 
 import java.io.InputStream;
@@ -24,6 +27,9 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+
+@Route(value = "terrains", layout = MainLayout.class)
+@PageTitle("Gestion des terrains")
 
 
 public class GestionTerrainsView extends VerticalLayout {

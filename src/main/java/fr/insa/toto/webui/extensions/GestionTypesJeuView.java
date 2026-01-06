@@ -30,6 +30,9 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+@Route(value = "types-jeu", layout = MainLayout.class)
+@PageTitle("Types de jeu")
+
 
 public class GestionTypesJeuView extends VerticalLayout {
 

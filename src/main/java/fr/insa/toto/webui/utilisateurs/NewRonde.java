@@ -1,4 +1,4 @@
-package fr.insa.toto.webui;
+package fr.insa.toto.webui.utilisateurs;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.H2;
@@ -9,6 +9,7 @@ import com.vaadin.flow.router.Route;
 
 import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
 import fr.insa.toto.model.*;
+import fr.insa.toto.webui.MainLayout;
 
 import java.sql.Connection;
 import java.util.List;

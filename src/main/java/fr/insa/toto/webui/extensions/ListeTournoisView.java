@@ -30,6 +30,10 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+@Route(value = "tournois", layout = MainLayout.class)
+@PageTitle("Liste des tournois")
+
+
 
 public class ListeTournoisView extends VerticalLayout {
 
