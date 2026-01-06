@@ -308,27 +308,52 @@ public class MainConsole {
     
     private void afficherInfosTournoi() {
         try {
-            if (tournoiCourant == null) {
-                tournoiCourant = TournoiMulti.getTournoiUnique(con);
-            }
+            // Récupérer tous les tournois
+            List<TournoiMulti> tournois = TournoiMulti.tousLesTournois(con);
             
-            if (tournoiCourant == null) {
-                System.out.println("\n❌ Aucun tournoi en cours");
+            if (tournois.isEmpty()) {
+                System.out.println("\n❌ Aucun tournoi créé");
                 return;
             }
+            
+            // Afficher le tournoi courant ou le dernier tournoi
+            TournoiMulti tournoi = tournoiCourant != null ? tournoiCourant : tournois.get(0);
             
             System.out.println("\n╔════════════════════════════════════════════╗");
             System.out.println("║        INFORMATIONS TOURNOI                ║");
             System.out.println("╚════════════════════════════════════════════╝");
-            System.out.println("Nom : " + tournoiCourant.getNom());
-            System.out.println("Terrains : " + tournoiCourant.getNbTerrains());
-            System.out.println("Joueurs par équipe : " + tournoiCourant.getNbJoueursParEquipe());
+            System.out.println("Nom : " + tournoi.getNom());
+            System.out.println("Statut : " + tournoi.getStatut());
+            System.out.println("Terrains : " + tournoi.getNbTerrains());
+            System.out.println("Joueurs par équipe : " + tournoi.getNbJoueursParEquipe());
+            System.out.println("Date création : " + tournoi.getDateCreation().toLocalDate());
             
-            int nbJoueurs = Joueur.count(con);
+            if (tournoi.getDateDebut() != null) {
+                System.out.println("Date début : " + tournoi.getDateDebut().toLocalDate());
+            }
+            
+            if (tournoi.getDateFin() != null) {
+                System.out.println("Date fin : " + tournoi.getDateFin().toLocalDate());
+            }
+            
+            // Compter les joueurs inscrits à ce tournoi
+            int nbJoueurs = tournoi.getJoueursInscrits(con).size();
             System.out.println("Joueurs inscrits : " + nbJoueurs);
+            
+            // Si plusieurs tournois existent, afficher un résumé
+            if (tournois.size() > 1) {
+                System.out.println("\n📊 Nombre total de tournois : " + tournois.size());
+                System.out.println("   - En cours : " + tournois.stream()
+                    .filter(t -> t.getStatut() == TournoiMulti.StatutTournoi.EN_COURS)
+                    .count());
+                System.out.println("   - Terminés : " + tournois.stream()
+                    .filter(t -> t.getStatut() == TournoiMulti.StatutTournoi.TERMINE)
+                    .count());
+            }
             
         } catch (SQLException ex) {
             System.out.println("❌ Erreur : " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 }
