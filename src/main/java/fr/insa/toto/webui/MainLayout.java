@@ -33,14 +33,16 @@ import fr.insa.toto.webui.session.LogoutEntete;
 public class MainLayout extends AppLayout implements BeforeEnterObserver {
 
     public MainLayout() {
+    // Vérifier d'abord si connecté
+    if (SessionInfo.userConnected()) {
         this.addToDrawer(new MainMenu());
         this.addToNavbar(new DrawerToggle());
-
-        // En navbar : uniquement le logout si connecté
-        if (SessionInfo.userConnected()) {
-            this.addToNavbar(new LogoutEntete());
-        }
+        this.addToNavbar(new LogoutEntete());
+    } else {
+        // Juste le toggle pour les pages publiques
+        this.addToNavbar(new DrawerToggle());
     }
+}
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
