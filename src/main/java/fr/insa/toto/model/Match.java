@@ -337,7 +337,17 @@ public class Match extends ClasseMiroir {
 
     return m;
 }
+public int getIdRonde() { 
+    return (ronde != null) ? ronde.getId() : -1; 
+}
 
+public int getIdEquipe1() {
+    return (equipe1 != null) ? equipe1.getId() : -1;
+}
+
+public int getIdEquipe2() {
+    return (equipe2 != null) ? equipe2.getId() : -1;
+}
 
     @Override
     public String toString() {
@@ -348,4 +358,3 @@ public class Match extends ClasseMiroir {
                 + " (" + statut + ")";
     }
 }
-

@@ -7,7 +7,7 @@ import fr.insa.toto.webui.utilisateurs.CreationAdmin;
 import fr.insa.toto.webui.utilisateurs.ListeUtilisateurs;
 import fr.insa.toto.webui.joueurs.InterfaceJoueurView;
 import fr.insa.toto.webui.extensions.*;
-
+import fr.insa.toto.webui.tournois.CreerTournoiView;
 // ⚠️ IMPORTANT : mets ici le BON import de NewRonde selon ton projet
 // Si ta classe est dans fr.insa.toto.webui.NewRonde, utilise :
 import fr.insa.toto.webui.utilisateurs.NewRonde;
@@ -29,14 +29,13 @@ public class MainMenu extends SideNav {
 
         // TOURNOIS
         SideNavItem tournois = new SideNavItem("Tournois");
-        tournois.addItem(new SideNavItem("Liste des tournois", ListeTournoisView.class));
-        tournois.addItem(new SideNavItem("Classement global", ClassementGlobalView.class));
-        if (SessionInfo.adminConnected()) {
-            tournois.addItem(new SideNavItem("Paramètres", TournoiParamView.class));
-            tournois.addItem(new SideNavItem("Créer une ronde", NewRonde.class));
-            tournois.addItem(new SideNavItem("Résultat match", MatchResultView.class));
-            tournois.addItem(new SideNavItem("Créer un match", MatchCreateView.class));
-        }
+tournois.addItem(new SideNavItem("Liste des tournois", ListeTournoisView.class));
+tournois.addItem(new SideNavItem("Classement global", ClassementGlobalView.class));
+
+if (SessionInfo.adminConnected()) {
+    tournois.addItem(new SideNavItem("Créer un tournoi", CreerTournoiView.class));
+}
+
 
         // TERRAINS
         SideNavItem terrains = new SideNavItem("Terrains");

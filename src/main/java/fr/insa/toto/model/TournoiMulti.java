@@ -8,27 +8,20 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Extension 2 : Gestion multi-tournoi
- * Version étendue de Tournoi qui permet de gérer plusieurs tournois
- * avec historique et classement global des joueurs
+ * Classe représentant un tournoi multi-joueurs.
+ * Hérite de ClasseMiroir pour la gestion de l'ID et de la sauvegarde en BDD.
  */
 public class TournoiMulti extends ClasseMiroir {
 
-    // --- Statuts possibles d'un tournoi ---
     public enum StatutTournoi {
-        EN_PREPARATION,  // Le tournoi est créé mais pas encore démarré
-        EN_COURS,        // Le tournoi a démarré et des rondes sont en cours
-        TERMINE          // Le tournoi est terminé
+        A_VENIR,
+        EN_COURS,
+        TERMINE
     }
 
-    // --- Attributs BD ---
     private String nom;
     private int nbTerrains;
     private int nbJoueursParEquipe;
@@ -37,453 +30,315 @@ public class TournoiMulti extends ClasseMiroir {
     private LocalDateTime dateFin;
     private StatutTournoi statut;
 
-    // --- Collections (mémoire) ---
-    private final List<Joueur> joueurs = new ArrayList<>();
-    private final List<Ronde> rondes = new ArrayList<>();
-    private final List<Terrain> terrains = new ArrayList<>();
+    // ========================================
+    // CONSTRUCTEURS
+    // ========================================
 
-    // --- Constructeurs ---
+    /**
+     * Constructeur pour un nouveau tournoi EN MÉMOIRE (pas encore en BDD).
+     * L'ID sera généré lors du saveInDB().
+     */
     public TournoiMulti(String nom, int nbTerrains, int nbJoueursParEquipe) {
-        super();
+        super(); // Appelle ClasseMiroir() qui met id = -1
         this.nom = nom;
         this.nbTerrains = nbTerrains;
         this.nbJoueursParEquipe = nbJoueursParEquipe;
         this.dateCreation = LocalDateTime.now();
-        this.statut = StatutTournoi.EN_PREPARATION;
+        this.dateDebut = null;
+        this.dateFin = null;
+        this.statut = StatutTournoi.A_VENIR;
     }
 
+    /**
+     * Constructeur pour un tournoi CHARGÉ DEPUIS LA BDD.
+     * Utilisé par les méthodes de récupération (getById, tousLesTournois, etc.)
+     */
     public TournoiMulti(int id, String nom, int nbTerrains, int nbJoueursParEquipe,
-                        LocalDateTime dateCreation, LocalDateTime dateDebut, 
+                        LocalDateTime dateCreation, LocalDateTime dateDebut,
                         LocalDateTime dateFin, StatutTournoi statut) {
-        super(id);
+        super(id); // Appelle ClasseMiroir(int id)
         this.nom = nom;
         this.nbTerrains = nbTerrains;
         this.nbJoueursParEquipe = nbJoueursParEquipe;
         this.dateCreation = dateCreation;
         this.dateDebut = dateDebut;
         this.dateFin = dateFin;
-        this.statut = statut;
+        this.statut = (statut == null) ? StatutTournoi.A_VENIR : statut;
     }
 
-    // ======================
-    // MODIFICATIONS DU SCHEMA
-    // ======================
-    
     /**
-     * Crée le schéma étendu pour multi-tournoi
+     * Constructeur SIMPLIFIÉ pour compatibilité avec l'ancien code.
+     * (sans dates et statut)
      */
-    public static void creerSchemaMultiTournoi(Connection con) throws SQLException {
-        try (Statement st = con.createStatement()) {
-            // Modifier la table tournoi pour ajouter les nouveaux champs
-            st.executeUpdate("""
-                ALTER TABLE tournoi ADD COLUMN IF NOT EXISTS 
-                    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    date_debut TIMESTAMP,
-                    date_fin TIMESTAMP,
-                    statut VARCHAR(20) DEFAULT 'EN_PREPARATION'
-                """);
-
-            // Table pour l'inscription des joueurs à un tournoi spécifique
-            st.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS inscription_tournoi (
-                    id_tournoi INTEGER NOT NULL,
-                    id_joueur INTEGER NOT NULL,
-                    date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (id_tournoi, id_joueur),
-                    FOREIGN KEY (id_tournoi) REFERENCES tournoi(id),
-                    FOREIGN KEY (id_joueur) REFERENCES joueur(id)
-                )
-                """);
-
-            // Table pour le classement global des joueurs (tous tournois)
-            st.executeUpdate("""
-                CREATE TABLE IF NOT EXISTS classement_global (
-                    id_joueur INTEGER PRIMARY KEY,
-                    nb_tournois_participes INTEGER DEFAULT 0,
-                    nb_matchs_joues INTEGER DEFAULT 0,
-                    nb_victoires INTEGER DEFAULT 0,
-                    score_total INTEGER DEFAULT 0,
-                    derniere_mise_a_jour TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (id_joueur) REFERENCES joueur(id)
-                )
-                """);
-        }
+    public TournoiMulti(int id, String nom, int nbTerrains, int nbJoueursParEquipe) {
+        this(id, nom, nbTerrains, nbJoueursParEquipe, 
+             LocalDateTime.now(), null, null, StatutTournoi.A_VENIR);
     }
 
-    // ======================
-    // PERSISTANCE
-    // ======================
+    // ========================================
+    // SAUVEGARDE EN BDD
+    // ========================================
 
+    /**
+     * ⚠️ NE PAS redéfinir saveInDB() car elle est FINAL dans ClasseMiroir.
+     * À la place, on redéfinit saveSansId() qui est appelée par saveInDB().
+     */
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {
-        String sql = """
-            INSERT INTO tournoi (nom, nb_terrains, nb_joueurs_par_equipe, 
-                                date_creation, date_debut, date_fin, statut)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """;
-        PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-        ps.setString(1, this.nom);
-        ps.setInt(2, this.nbTerrains);
-        ps.setInt(3, this.nbJoueursParEquipe);
-        ps.setTimestamp(4, java.sql.Timestamp.valueOf(this.dateCreation));
-        ps.setTimestamp(5, this.dateDebut != null ? java.sql.Timestamp.valueOf(this.dateDebut) : null);
-        ps.setTimestamp(6, this.dateFin != null ? java.sql.Timestamp.valueOf(this.dateFin) : null);
-        ps.setString(7, this.statut.name());
-        ps.executeUpdate();
-        return ps;
-    }
-
-    public void updateInDB(Connection con) throws SQLException {
-        if (this.getId() < 0) {
-            throw new IllegalStateException("Tournoi sans id");
-        }
-        String sql = """
-            UPDATE tournoi
-            SET nom = ?, nb_terrains = ?, nb_joueurs_par_equipe = ?,
-                date_debut = ?, date_fin = ?, statut = ?
-            WHERE id = ?
-            """;
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, this.nom);
-            ps.setInt(2, this.nbTerrains);
-            ps.setInt(3, this.nbJoueursParEquipe);
-            ps.setTimestamp(4, this.dateDebut != null ? java.sql.Timestamp.valueOf(this.dateDebut) : null);
-            ps.setTimestamp(5, this.dateFin != null ? java.sql.Timestamp.valueOf(this.dateFin) : null);
-            ps.setString(6, this.statut.name());
-            ps.setInt(7, this.getId());
-            ps.executeUpdate();
+        // ✅ CORRECTION : Utiliser getId() au lieu de this.id
+        if (this.getId() == -1) {
+            // Insertion d'un nouveau tournoi
+            PreparedStatement pst = con.prepareStatement(
+                "INSERT INTO tournoi (nom, nb_terrains, nb_joueurs_par_equipe) VALUES (?, ?, ?)",
+                Statement.RETURN_GENERATED_KEYS
+            );
+            pst.setString(1, this.nom);
+            pst.setInt(2, this.nbTerrains);
+            pst.setInt(3, this.nbJoueursParEquipe);
+            pst.executeUpdate();
+            return pst;
+        } else {
+            // Mise à jour d'un tournoi existant
+            PreparedStatement pst = con.prepareStatement(
+                "UPDATE tournoi SET nom = ?, nb_terrains = ?, nb_joueurs_par_equipe = ? WHERE id = ?"
+            );
+            pst.setString(1, this.nom);
+            pst.setInt(2, this.nbTerrains);
+            pst.setInt(3, this.nbJoueursParEquipe);
+            pst.setInt(4, this.getId()); // ✅ Utiliser getId()
+            pst.executeUpdate();
+            return pst;
         }
     }
 
-    // ======================
-    // GESTION MULTI-TOURNOI
-    // ======================
+    // ========================================
+    // MÉTHODES DE RÉCUPÉRATION
+    // ========================================
 
     /**
-     * Récupère tous les tournois (en cours, terminés, en préparation)
+     * Récupère tous les tournois de la base de données.
      */
     public static List<TournoiMulti> tousLesTournois(Connection con) throws SQLException {
-        List<TournoiMulti> result = new ArrayList<>();
-        String sql = """
-            SELECT id, nom, nb_terrains, nb_joueurs_par_equipe,
-                   date_creation, date_debut, date_fin, statut
-            FROM tournoi
-            ORDER BY date_creation DESC
-            """;
+        List<TournoiMulti> res = new ArrayList<>();
         
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                result.add(new TournoiMulti(
-                    rs.getInt("id"),
-                    rs.getString("nom"),
-                    rs.getInt("nb_terrains"),
-                    rs.getInt("nb_joueurs_par_equipe"),
-                    rs.getTimestamp("date_creation").toLocalDateTime(),
-                    rs.getTimestamp("date_debut") != null 
-                        ? rs.getTimestamp("date_debut").toLocalDateTime() : null,
-                    rs.getTimestamp("date_fin") != null 
-                        ? rs.getTimestamp("date_fin").toLocalDateTime() : null,
-                    StatutTournoi.valueOf(rs.getString("statut"))
-                ));
+        try (PreparedStatement pst = con.prepareStatement(
+                "SELECT id, nom, nb_terrains, nb_joueurs_par_equipe FROM tournoi ORDER BY id DESC")) {
+            
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    res.add(new TournoiMulti(
+                        rs.getInt("id"),
+                        rs.getString("nom"),
+                        rs.getInt("nb_terrains"),
+                        rs.getInt("nb_joueurs_par_equipe")
+                    ));
+                }
             }
         }
-        return result;
+        
+        return res;
     }
 
     /**
-     * Récupère un tournoi par son ID
+     * Récupère un tournoi par son ID.
      */
     public static TournoiMulti getById(Connection con, int id) throws SQLException {
-        String sql = """
-            SELECT id, nom, nb_terrains, nb_joueurs_par_equipe,
-                   date_creation, date_debut, date_fin, statut
-            FROM tournoi
-            WHERE id = ?
-            """;
-        
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
+        try (PreparedStatement pst = con.prepareStatement(
+                "SELECT id, nom, nb_terrains, nb_joueurs_par_equipe FROM tournoi WHERE id = ?")) {
+            
+            pst.setInt(1, id);
+            
+            try (ResultSet rs = pst.executeQuery()) {
                 if (rs.next()) {
                     return new TournoiMulti(
                         rs.getInt("id"),
                         rs.getString("nom"),
                         rs.getInt("nb_terrains"),
-                        rs.getInt("nb_joueurs_par_equipe"),
-                        rs.getTimestamp("date_creation").toLocalDateTime(),
-                        rs.getTimestamp("date_debut") != null 
-                            ? rs.getTimestamp("date_debut").toLocalDateTime() : null,
-                        rs.getTimestamp("date_fin") != null 
-                            ? rs.getTimestamp("date_fin").toLocalDateTime() : null,
-                        StatutTournoi.valueOf(rs.getString("statut"))
+                        rs.getInt("nb_joueurs_par_equipe")
                     );
                 }
             }
         }
+        
         return null;
     }
 
     /**
-     * Démarre le tournoi
+     * Supprime le tournoi de la base de données.
+     * ATTENTION : Supprime aussi toutes les données associées.
      */
-    public void demarrer(Connection con) throws SQLException {
-        if (this.statut != StatutTournoi.EN_PREPARATION) {
-            throw new IllegalStateException("Le tournoi n'est pas en préparation");
+    public void deleteFromDB(Connection con) throws SQLException {
+        // ✅ CORRECTION : Utiliser getId() au lieu de this.id
+        if (this.getId() == -1) {
+            throw new IllegalStateException("Impossible de supprimer un tournoi non sauvegardé");
         }
-        this.dateDebut = LocalDateTime.now();
-        this.statut = StatutTournoi.EN_COURS;
-        this.updateInDB(con);
+
+        // Supprimer dans l'ordre inverse des dépendances
+        try (PreparedStatement pst = con.prepareStatement(
+                "DELETE FROM match_joueur WHERE id_match IN " +
+                "(SELECT id FROM matchs WHERE ronde_id IN " +
+                "(SELECT id FROM ronde WHERE id_tournoi = ?))")) {
+            pst.setInt(1, this.getId());
+            pst.executeUpdate();
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(
+                "DELETE FROM matchs WHERE ronde_id IN " +
+                "(SELECT id FROM ronde WHERE id_tournoi = ?)")) {
+            pst.setInt(1, this.getId());
+            pst.executeUpdate();
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(
+                "DELETE FROM equipe WHERE id_match IN " +
+                "(SELECT id FROM matchs WHERE ronde_id IN " +
+                "(SELECT id FROM ronde WHERE id_tournoi = ?))")) {
+            pst.setInt(1, this.getId());
+            pst.executeUpdate();
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(
+                "DELETE FROM ronde WHERE id_tournoi = ?")) {
+            pst.setInt(1, this.getId());
+            pst.executeUpdate();
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(
+                "DELETE FROM inscription_tournoi WHERE id_tournoi = ?")) {
+            pst.setInt(1, this.getId());
+            pst.executeUpdate();
+        }
+
+        try (PreparedStatement pst = con.prepareStatement(
+                "DELETE FROM tournoi WHERE id = ?")) {
+            pst.setInt(1, this.getId());
+            pst.executeUpdate();
+        }
     }
 
-    /**
-     * Termine le tournoi et met à jour le classement global
-     */
-    public void terminer(Connection con) throws SQLException {
-        if (this.statut != StatutTournoi.EN_COURS) {
-            throw new IllegalStateException("Le tournoi n'est pas en cours");
-        }
-        this.dateFin = LocalDateTime.now();
-        this.statut = StatutTournoi.TERMINE;
-        this.updateInDB(con);
-        
-        // Mettre à jour le classement global pour tous les joueurs du tournoi
-        mettreAJourClassementGlobal(con);
-    }
+    // ========================================
+    // CLASSEMENT GLOBAL
+    // ========================================
 
     /**
-     * Inscrire un joueur à ce tournoi
+     * Récupère le classement global de tous les joueurs d'un tournoi.
      */
-    public void inscrireJoueur(Connection con, Joueur joueur) throws SQLException {
-        if (this.statut != StatutTournoi.EN_PREPARATION) {
-            throw new IllegalStateException("Les inscriptions sont closes");
-        }
-        
-        String sql = "INSERT INTO inscription_tournoi (id_tournoi, id_joueur) VALUES (?, ?)";
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, this.getId());
-            ps.setInt(2, joueur.getId());
-            ps.executeUpdate();
-        }
-        this.joueurs.add(joueur);
-    }
+    public List<ClassementGlobalInfo> getClassementGlobal(Connection con) throws SQLException {
+        List<ClassementGlobalInfo> classement = new ArrayList<>();
 
-    /**
-     * Récupère tous les joueurs inscrits à ce tournoi
-     */
-    public List<Joueur> getJoueursInscrits(Connection con) throws SQLException {
-        List<Joueur> result = new ArrayList<>();
-        String sql = """
-            SELECT j.* FROM joueur j
-            JOIN inscription_tournoi it ON it.id_joueur = j.id
-            WHERE it.id_tournoi = ?
-            """;
-        
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, this.getId());
-            try (ResultSet rs = ps.executeQuery()) {
+        String sql = 
+            "SELECT j.id AS idJoueur, j.surnom, j.nom, j.prenom, " +
+            "       COUNT(DISTINCT r.id) AS nbTournois, " +
+            "       COUNT(DISTINCT m.id) AS nbMatchs, " +
+            "       SUM(CASE WHEN e.score > e2.score THEN 1 ELSE 0 END) AS nbVictoires, " +
+            "       SUM(e.score) AS scoreTotal " +
+            "FROM joueur j " +
+            "JOIN match_joueur mj ON j.id = mj.id_joueur " +
+            "JOIN equipe e ON mj.id_equipe = e.id " +
+            "JOIN matchs m ON e.id_match = m.id " +
+            "JOIN ronde r ON m.ronde_id = r.id " +
+            "LEFT JOIN equipe e2 ON m.id = e2.id_match AND e2.numero != e.numero " +
+            "WHERE r.id_tournoi = ? " +
+            "GROUP BY j.id, j.surnom, j.nom, j.prenom " +
+            "ORDER BY scoreTotal DESC, nbVictoires DESC";
+
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setInt(1, this.getId());
+            
+            try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
-                    result.add(new Joueur(
-                        rs.getInt("id"),
+                    classement.add(new ClassementGlobalInfo(
+                        rs.getInt("idJoueur"),
                         rs.getString("surnom"),
-                        rs.getString("categorie"),
-                        rs.getInt("taillecm"),
                         rs.getString("nom"),
                         rs.getString("prenom"),
-                        rs.getString("sexe"),
-                        rs.getDate("date_naissance") != null 
-                            ? rs.getDate("date_naissance").toLocalDate() : null
+                        rs.getInt("nbTournois"),
+                        rs.getInt("nbMatchs"),
+                        rs.getInt("nbVictoires"),
+                        rs.getInt("scoreTotal")
                     ));
                 }
             }
         }
-        return result;
+
+        return classement;
     }
 
-    // ======================
-    // CLASSEMENT GLOBAL
-    // ======================
-
-    /**
-     * Met à jour le classement global après la fin d'un tournoi
-     */
-    private void mettreAJourClassementGlobal(Connection con) throws SQLException {
-        List<Joueur> joueursInscrits = getJoueursInscrits(con);
-        
-        for (Joueur j : joueursInscrits) {
-            // Compter les statistiques du joueur dans ce tournoi
-            int scoreTournoi = calculerScoreJoueurTournoi(con, j.getId());
-            int matchsJoues = compterMatchsJoueurTournoi(con, j.getId());
-            int victoires = compterVictoiresJoueurTournoi(con, j.getId());
-            
-            // Mettre à jour ou créer l'entrée dans classement_global
-            String sqlCheck = "SELECT id_joueur FROM classement_global WHERE id_joueur = ?";
-            boolean existe = false;
-            try (PreparedStatement ps = con.prepareStatement(sqlCheck)) {
-                ps.setInt(1, j.getId());
-                try (ResultSet rs = ps.executeQuery()) {
-                    existe = rs.next();
-                }
-            }
-            
-            if (existe) {
-                String sqlUpdate = """
-                    UPDATE classement_global
-                    SET nb_tournois_participes = nb_tournois_participes + 1,
-                        nb_matchs_joues = nb_matchs_joues + ?,
-                        nb_victoires = nb_victoires + ?,
-                        score_total = score_total + ?,
-                        derniere_mise_a_jour = CURRENT_TIMESTAMP
-                    WHERE id_joueur = ?
-                    """;
-                try (PreparedStatement ps = con.prepareStatement(sqlUpdate)) {
-                    ps.setInt(1, matchsJoues);
-                    ps.setInt(2, victoires);
-                    ps.setInt(3, scoreTournoi);
-                    ps.setInt(4, j.getId());
-                    ps.executeUpdate();
-                }
-            } else {
-                String sqlInsert = """
-                    INSERT INTO classement_global 
-                        (id_joueur, nb_tournois_participes, nb_matchs_joues, 
-                         nb_victoires, score_total)
-                    VALUES (?, 1, ?, ?, ?)
-                    """;
-                try (PreparedStatement ps = con.prepareStatement(sqlInsert)) {
-                    ps.setInt(1, j.getId());
-                    ps.setInt(2, matchsJoues);
-                    ps.setInt(3, victoires);
-                    ps.setInt(4, scoreTournoi);
-                    ps.executeUpdate();
-                }
-            }
-        }
-    }
-
-    /**
-     * Récupère le classement global de tous les joueurs
-     */
-    public static List<ClassementGlobalInfo> getClassementGlobal(Connection con) throws SQLException {
-        List<ClassementGlobalInfo> result = new ArrayList<>();
-        String sql = """
-            SELECT j.id, j.surnom, j.nom, j.prenom,
-                   cg.nb_tournois_participes, cg.nb_matchs_joues,
-                   cg.nb_victoires, cg.score_total
-            FROM classement_global cg
-            JOIN joueur j ON j.id = cg.id_joueur
-            ORDER BY cg.score_total DESC, cg.nb_victoires DESC
-            """;
-        
-        try (PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                result.add(new ClassementGlobalInfo(
-                    rs.getInt("id"),
-                    rs.getString("surnom"),
-                    rs.getString("nom"),
-                    rs.getString("prenom"),
-                    rs.getInt("nb_tournois_participes"),
-                    rs.getInt("nb_matchs_joues"),
-                    rs.getInt("nb_victoires"),
-                    rs.getInt("score_total")
-                ));
-            }
-        }
-        return result;
-    }
-
-    // ======================
-    // MÉTHODES UTILITAIRES
-    // ======================
-
-    private int calculerScoreJoueurTournoi(Connection con, int idJoueur) throws SQLException {
-        String sql = """
-            SELECT COALESCE(SUM(e.score), 0) AS total
-            FROM match_joueur mj
-            JOIN equipe e ON e.id_match = mj.id_match AND e.numero = mj.numero_equipe
-            JOIN matchs m ON m.id = mj.id_match
-            JOIN ronde r ON r.id = m.ronde_id
-            WHERE mj.id_joueur = ? AND r.id_tournoi = ?
-            """;
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, idJoueur);
-            ps.setInt(2, this.getId());
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt("total");
-            }
-        }
-    }
-
-    private int compterMatchsJoueurTournoi(Connection con, int idJoueur) throws SQLException {
-        String sql = """
-            SELECT COUNT(DISTINCT mj.id_match)
-            FROM match_joueur mj
-            JOIN matchs m ON m.id = mj.id_match
-            JOIN ronde r ON r.id = m.ronde_id
-            WHERE mj.id_joueur = ? AND r.id_tournoi = ?
-            """;
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, idJoueur);
-            ps.setInt(2, this.getId());
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt(1);
-            }
-        }
-    }
-
-    private int compterVictoiresJoueurTournoi(Connection con, int idJoueur) throws SQLException {
-        String sql = """
-            SELECT COUNT(*) FROM (
-                SELECT m.id
-                FROM matchs m
-                JOIN ronde r ON r.id = m.ronde_id
-                JOIN match_joueur mj ON mj.id_match = m.id
-                JOIN equipe e1 ON e1.id_match = m.id AND e1.numero = mj.numero_equipe
-                JOIN equipe e2 ON e2.id_match = m.id AND e2.numero != mj.numero_equipe
-                WHERE mj.id_joueur = ? AND r.id_tournoi = ? 
-                  AND m.statut = 'CLOS' AND e1.score > e2.score
-            ) AS victoires
-            """;
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, idJoueur);
-            ps.setInt(2, this.getId());
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt(1);
-            }
-        }
-    }
-
-    // ======================
+    // ========================================
     // GETTERS / SETTERS
-    // ======================
+    // ========================================
 
-    public String getNom() { return nom; }
-    public void setNom(String nom) { this.nom = nom; }
-    
-    public int getNbTerrains() { return nbTerrains; }
-    public void setNbTerrains(int nbTerrains) { this.nbTerrains = nbTerrains; }
-    
-    public int getNbJoueursParEquipe() { return nbJoueursParEquipe; }
-    public void setNbJoueursParEquipe(int nbJoueursParEquipe) { 
-        this.nbJoueursParEquipe = nbJoueursParEquipe; 
+    public String getNom() {
+        return nom;
     }
-    
-    public LocalDateTime getDateCreation() { return dateCreation; }
-    public LocalDateTime getDateDebut() { return dateDebut; }
-    public LocalDateTime getDateFin() { return dateFin; }
-    public StatutTournoi getStatut() { return statut; }
 
-    public List<Joueur> getJoueurs() { return Collections.unmodifiableList(joueurs); }
-    public List<Ronde> getRondes() { return Collections.unmodifiableList(rondes); }
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
 
-    // ======================
-    // CLASSE INTERNE
-    // ======================
+    public int getNbTerrains() {
+        return nbTerrains;
+    }
 
+    public void setNbTerrains(int nbTerrains) {
+        this.nbTerrains = nbTerrains;
+    }
+
+    public int getNbJoueursParEquipe() {
+        return nbJoueursParEquipe;
+    }
+
+    public void setNbJoueursParEquipe(int nbJoueursParEquipe) {
+        this.nbJoueursParEquipe = nbJoueursParEquipe;
+    }
+
+    public LocalDateTime getDateCreation() {
+        return dateCreation;
+    }
+
+    public LocalDateTime getDateDebut() {
+        return dateDebut;
+    }
+
+    public void setDateDebut(LocalDateTime dateDebut) {
+        this.dateDebut = dateDebut;
+    }
+
+    public LocalDateTime getDateFin() {
+        return dateFin;
+    }
+
+    public void setDateFin(LocalDateTime dateFin) {
+        this.dateFin = dateFin;
+    }
+
+    public StatutTournoi getStatut() {
+        return statut;
+    }
+
+    public void setStatut(StatutTournoi statut) {
+        this.statut = statut;
+    }
+
+    @Override
+    public String toString() {
+        return "TournoiMulti{" +
+                "id=" + getId() +
+                ", nom='" + nom + '\'' +
+                ", terrains=" + nbTerrains +
+                ", joueurs/equipe=" + nbJoueursParEquipe +
+                ", statut=" + statut +
+                '}';
+    }
+
+    // ========================================
+    // CLASSE INTERNE (C'EST NORMAL !)
+    // ========================================
+
+    /**
+     * ✅ CLASSE INTERNE STATIQUE : C'est une bonne pratique !
+     * Elle sert à transporter les données de classement.
+     */
     public static class ClassementGlobalInfo {
         private int idJoueur;
         private String surnom;
@@ -515,9 +370,12 @@ public class TournoiMulti extends ClasseMiroir {
         public int getNbMatchs() { return nbMatchs; }
         public int getNbVictoires() { return nbVictoires; }
         public int getScoreTotal() { return scoreTotal; }
-        
-        public double getTauxVictoire() {
-            return nbMatchs > 0 ? (nbVictoires * 100.0) / nbMatchs : 0.0;
+
+        @Override
+        public String toString() {
+            return surnom + " (" + nom + " " + prenom + ") - " +
+                   "Matchs: " + nbMatchs + ", Victoires: " + nbVictoires +
+                   ", Score: " + scoreTotal;
         }
     }
 }
