@@ -1,7 +1,8 @@
 package fr.insa.toto.webui.extensions;
 
 import com.vaadin.flow.component.button.Button;
-
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
@@ -24,7 +25,6 @@ import java.util.List;
 
 @Route(value = "templates", layout = MainLayout.class)
 @PageTitle("Gestion des templates")
-
 public class GestionTemplatesView extends VerticalLayout {
 
     private Grid<TemplateTournoi> grid;
@@ -82,6 +82,7 @@ public class GestionTemplatesView extends VerticalLayout {
 
         // Bouton pour créer un tournoi depuis un template
         creerTournoiDepuisTemplate = new Button("Créer tournoi depuis sélection");
+        creerTournoiDepuisTemplate.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         creerTournoiDepuisTemplate.addClickListener(e -> creerTournoiFromTemplate());
         add(creerTournoiDepuisTemplate);
 
@@ -116,53 +117,75 @@ public class GestionTemplatesView extends VerticalLayout {
                 nom, description, nbTerrains, nbJoueurs, duree, isPublic
             );
             template.saveInDB(con);
-            Notification.show("Template créé !");
+            Notification.show("✅ Template créé !");
             nomField.clear();
             descriptionField.clear();
             chargerTemplates();
 
         } catch (SQLException ex) {
             ex.printStackTrace();
-            Notification.show("Erreur : " + ex.getMessage());
+            Notification.show("❌ Erreur : " + ex.getMessage());
         }
     }
 
     private void creerTournoiFromTemplate() {
         TemplateTournoi selected = grid.asSingleSelect().getValue();
         if (selected == null) {
-            Notification.show("Sélectionnez un template");
+            Notification.show("⚠️ Sélectionnez un template dans la grille");
             return;
         }
 
-        // Dialog pour demander le nom du nouveau tournoi
-        TextField nomTournoi = new TextField("Nom du nouveau tournoi");
-        Button valider = new Button("Créer");
+        // Créer un vrai Dialog Vaadin
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Créer un tournoi");
 
-        VerticalLayout dialog = new VerticalLayout(
-            new H3("Créer un tournoi depuis : " + selected.getNom()),
-            nomTournoi,
-            valider
+        // Informations du template
+        Paragraph infoTemplate = new Paragraph(
+            "Template : " + selected.getNom() + "\n" +
+            "Terrains : " + selected.getNbTerrains() + "\n" +
+            "Joueurs/équipe : " + selected.getNbJoueursParEquipe()
         );
+        infoTemplate.getStyle().set("white-space", "pre-line");
 
-        valider.addClickListener(e -> {
+        // Champ pour le nom du nouveau tournoi
+        TextField nomTournoi = new TextField("Nom du nouveau tournoi");
+        nomTournoi.setWidthFull();
+        nomTournoi.setPlaceholder("Ex: Tournoi Printemps 2025");
+        nomTournoi.setAutofocus(true);
+
+        // Layout du dialog
+        VerticalLayout layout = new VerticalLayout(infoTemplate, nomTournoi);
+        layout.setPadding(false);
+        layout.setSpacing(true);
+
+        // Boutons
+        Button creerBtn = new Button("Créer", e -> {
             String nom = nomTournoi.getValue();
             if (nom == null || nom.isBlank()) {
-                Notification.show("Le nom est obligatoire");
+                Notification.show("⚠️ Le nom est obligatoire");
                 return;
             }
 
             try (Connection con = ConnectionPool.getConnection()) {
                 TournoiMulti nouveau = selected.creerTournoiDepuisTemplate(con, nom);
-                Notification.show("Tournoi créé : " + nouveau.getNom());
+                Notification.show("✅ Tournoi créé : " + nouveau.getNom(), 
+                                5000, Notification.Position.MIDDLE);
+                dialog.close();
 
             } catch (SQLException ex) {
                 ex.printStackTrace();
-                Notification.show("Erreur : " + ex.getMessage());
+                Notification.show("❌ Erreur : " + ex.getMessage(), 
+                                5000, Notification.Position.MIDDLE);
             }
         });
+        creerBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        // Note: Pour afficher un vrai dialog, il faudrait utiliser Dialog de Vaadin
-        // Ici on montre la logique, mais l'UI complète nécessiterait Dialog component
-        Notification.show("Fonctionnalité de dialog à compléter avec Vaadin Dialog");
+        Button annulerBtn = new Button("Annuler", e -> dialog.close());
+
+        dialog.add(layout);
+        dialog.getFooter().add(annulerBtn, creerBtn);
+        dialog.setWidth("500px");
+        
+        dialog.open();
     }
 }
