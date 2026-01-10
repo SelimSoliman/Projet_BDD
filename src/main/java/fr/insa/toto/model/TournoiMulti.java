@@ -16,6 +16,29 @@ import java.util.List;
  */
 public class TournoiMulti extends ClasseMiroir {
 
+
+public List<Joueur> getJoueursInscrits(Connection con) throws SQLException {
+    List<Joueur> res = new ArrayList<>();
+
+    String sql = """
+        SELECT j.id, j.surnom, j.categorie, j.taillecm, j.nom, j.prenom, j.sexe, j.date_naissance
+        FROM joueur j
+        JOIN inscription_tournoi it ON it.joueur_id = j.id
+        WHERE it.tournoi_id = ?
+        """;
+
+    try (PreparedStatement pst = con.prepareStatement(sql)) {
+        pst.setInt(1, this.getId());
+        try (ResultSet rs = pst.executeQuery()) {
+            while (rs.next()) {
+                res.add(Joueur.fromResultSet(rs));
+            }
+        }
+    }
+
+    return res;
+}
+
     public enum StatutTournoi {
         A_VENIR,
         EN_COURS,
@@ -29,6 +52,8 @@ public class TournoiMulti extends ClasseMiroir {
     private LocalDateTime dateDebut;
     private LocalDateTime dateFin;
     private StatutTournoi statut;
+
+   
 
     // ========================================
     // CONSTRUCTEURS
@@ -330,6 +355,8 @@ public class TournoiMulti extends ClasseMiroir {
                 ", statut=" + statut +
                 '}';
     }
+ 
+
 
     // ========================================
     // CLASSE INTERNE (C'EST NORMAL !)

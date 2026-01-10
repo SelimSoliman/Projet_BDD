@@ -66,8 +66,9 @@ public class LoginView extends VerticalLayout {
                 if (trouve.isEmpty()) {
                     form.setError(true);
                 } else {
-                    SessionInfo.setUser(trouve.get());
-                    UI.getCurrent().navigate(""); // accueil
+                   SessionInfo.setUserConnected(trouve.get());
+
+UI.getCurrent().navigate(""); // accueil
                 }
 
             } catch (SQLException ex) {

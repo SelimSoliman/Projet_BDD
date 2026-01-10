@@ -2,66 +2,82 @@ package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
+import com.vaadin.flow.component.icon.VaadinIcon;
+
+
+
 import fr.insa.toto.webui.session.SessionInfo;
+
+// vues utilisateurs
 import fr.insa.toto.webui.utilisateurs.CreationAdmin;
 import fr.insa.toto.webui.utilisateurs.ListeUtilisateurs;
+
+// vues joueur
 import fr.insa.toto.webui.joueurs.InterfaceJoueurView;
-import fr.insa.toto.webui.extensions.*;
+
+// vues tournois / extensions
+import fr.insa.toto.webui.extensions.ListeTournoisView;
+import fr.insa.toto.webui.extensions.ClassementGlobalView;
+import fr.insa.toto.webui.extensions.GestionTerrainsView;
+import fr.insa.toto.webui.extensions.GestionTypesJeuView;
+import fr.insa.toto.webui.extensions.GestionTemplatesView;
+
+// autres vues
 import fr.insa.toto.webui.tournois.CreerTournoiView;
-// ⚠️ IMPORTANT : mets ici le BON import de NewRonde selon ton projet
-// Si ta classe est dans fr.insa.toto.webui.NewRonde, utilise :
 import fr.insa.toto.webui.utilisateurs.NewRonde;
-// (et supprime l'import fr.insa.toto.webui.utilisateurs.NewRonde si tu l'avais)
 
 public class MainMenu extends SideNav {
 
     public MainMenu() {
+        addClassName("sidebar"); // ✅ important pour ton CSS
 
-        // ACCUEIL
+        /* ===== ACCUEIL ===== */
         SideNavItem accueil = new SideNavItem("Accueil", VuePrincipale.class);
 
-        // UTILISATEURS
+        /* ===== UTILISATEURS ===== */
         SideNavItem utilisateurs = new SideNavItem("Utilisateurs");
         utilisateurs.addItem(new SideNavItem("Liste", ListeUtilisateurs.class));
+
         if (SessionInfo.adminConnected()) {
             utilisateurs.addItem(new SideNavItem("Création", CreationAdmin.class));
         }
 
-        // TOURNOIS
+        /* ===== TOURNOIS ===== */
         SideNavItem tournois = new SideNavItem("Tournois");
-tournois.addItem(new SideNavItem("Liste des tournois", ListeTournoisView.class));
-tournois.addItem(new SideNavItem("Classement global", ClassementGlobalView.class));
+        tournois.addItem(new SideNavItem("Liste des tournois", ListeTournoisView.class));
+        tournois.addItem(new SideNavItem("Classement global", ClassementGlobalView.class));
 
-if (SessionInfo.adminConnected()) {
-    tournois.addItem(new SideNavItem("Créer un tournoi", CreerTournoiView.class));
-}
+        if (SessionInfo.adminConnected()) {
+            tournois.addItem(new SideNavItem("Créer un tournoi", CreerTournoiView.class));
+            tournois.addItem(new SideNavItem("Créer une ronde", NewRonde.class));
+        }
 
-
-        // TERRAINS
+        /* ===== TERRAINS ===== */
         SideNavItem terrains = new SideNavItem("Terrains");
         if (SessionInfo.adminConnected()) {
             terrains.addItem(new SideNavItem("Gestion avec plan", GestionTerrainsView.class));
         }
 
-        // On assemble SANS NULL
-        this.addItem(accueil, utilisateurs);
+        /* ===== ASSEMBLAGE DU MENU ===== */
+        addItem(accueil, utilisateurs);
 
-        if (SessionInfo.userConnected()) {
-            this.addItem(new SideNavItem("Mon Espace Joueur", InterfaceJoueurView.class));
+        if (SessionInfo.connected()) {
+            addItem(new SideNavItem("Mon Espace Joueur", InterfaceJoueurView.class));
         }
 
-        this.addItem(tournois);
+        addItem(tournois);
 
         if (SessionInfo.adminConnected()) {
-            this.addItem(terrains);
+            addItem(terrains);
 
             SideNavItem typesJeu = new SideNavItem("Types de Jeu");
             typesJeu.addItem(new SideNavItem("Gestion", GestionTypesJeuView.class));
-            this.addItem(typesJeu);
+            addItem(typesJeu);
 
             SideNavItem templates = new SideNavItem("Templates");
             templates.addItem(new SideNavItem("Gestion des templates", GestionTemplatesView.class));
-            this.addItem(templates);
+            addItem(templates);
         }
     }
+
 }

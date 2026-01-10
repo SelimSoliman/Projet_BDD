@@ -15,9 +15,11 @@ import fr.insa.toto.model.TournoiMulti;
 import fr.insa.toto.model.Ronde;
 import fr.insa.toto.model.Equipe;
 import fr.insa.toto.model.Match;
+import fr.insa.toto.model.Terrain;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.extensions.ListeTournoisView;
 import fr.insa.toto.webui.session.SessionInfo;
-import fr.insa.toto.webui.tournois.ListeTournoisView;
+
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -187,43 +189,53 @@ public class CreerUnMatch extends VerticalLayout {
         creerMatchButton.setEnabled(enabled);
     }
 
-    private void creerMatch() {
-        Ronde ronde = rondeSelect.getValue();
-        Equipe equipe1 = equipe1Select.getValue();
-        Equipe equipe2 = equipe2Select.getValue();
+private void creerMatch() {
+    Ronde ronde = rondeSelect.getValue();
+    Equipe equipe1 = equipe1Select.getValue();
+    Equipe equipe2 = equipe2Select.getValue();
 
-        if (ronde == null || equipe1 == null || equipe2 == null) {
-            Notification.show("⚠️ Veuillez sélectionner une ronde et deux équipes", 
-                            3000, Notification.Position.MIDDLE)
-                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            return;
-        }
-
-        if (equipe1.getId() == equipe2.getId()) {
-            Notification.show("⚠️ Les deux équipes doivent être différentes", 
-                            3000, Notification.Position.MIDDLE)
-                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
-            return;
-        }
-
-        try (Connection con = ConnectionPool.getConnection()) {
-            Match match = new Match(ronde.getId(), equipe1.getId(), equipe2.getId(), -1, -1);
-            match.saveInDB(con);
-
-            Notification.show("✅ Match créé avec succès (ID: " + match.getId() + ")", 
-                            5000, Notification.Position.MIDDLE)
-                       .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-
-            // Réinitialiser les sélections
-            equipe1Select.clear();
-            equipe2Select.clear();
-            creerMatchButton.setEnabled(false);
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            Notification.show("❌ Erreur lors de la création du match : " + ex.getMessage(), 
-                            5000, Notification.Position.MIDDLE)
-                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
-        }
+    if (ronde == null || equipe1 == null || equipe2 == null) {
+        Notification.show("⚠️ Veuillez sélectionner une ronde et deux équipes",
+                3000, Notification.Position.MIDDLE);
+        return;
     }
-}
+    if (equipe1.getId() == equipe2.getId()) {
+        Notification.show("⚠️ Les deux équipes doivent être différentes",
+                3000, Notification.Position.MIDDLE);
+        return;
+    }
+
+    try (Connection con = ConnectionPool.getConnection()) {
+
+        // ✅ terrain : tu peux mettre null si tu ne gères pas encore la sélection de terrain
+        Terrain terrain = null;
+
+        // ✅ bon constructeur
+        Match match = new Match(ronde, terrain);
+
+        // ✅ optionnel : mettre des scores initiaux si tu veux (sinon 0 par défaut)
+        match.setScoreEquipe1(0);
+        match.setScoreEquipe2(0);
+
+        // ✅ insert dans "matchs"
+        match.saveInDB(con);
+
+        // ⚠️ IMPORTANT :
+        // ton Match crée en mémoire 2 Equipe(this,1) et Equipe(this,2)
+        // MAIS ton écran te fait sélectionner des Equipes venant de la BD.
+        // Donc ton système "sélectionner equipe1/equipe2" n’est PAS compatible
+        // avec le modèle Match actuel (qui crée ses propres équipes).
+        //
+        // => pour l’instant, NE sélectionne pas equipe1/equipe2 : supprime ces selects
+        // => ou alors change le modèle (plus lourd).
+        //
+        // Je te conseille : supprimer equipe1Select/equipe2Select et créer les équipes automatiquement.
+
+        Notification.show("✅ Match créé (ID: " + match.getId() + ")",
+                4000, Notification.Position.MIDDLE);
+
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+        Notification.show("❌ Erreur : " + ex.getMessage(),
+                5000, Notification.Position.MIDDLE);
+    } } }

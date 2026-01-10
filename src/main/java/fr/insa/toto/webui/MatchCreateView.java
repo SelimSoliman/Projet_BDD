@@ -96,7 +96,7 @@ public class MatchCreateView extends VerticalLayout {
             }
 
             // On prend la dernière ronde, et on exige qu’elle soit ouverte
-            rondeOuverte = Ronde.findDerniereRonde(con, tournoi);
+            rondeOuverte = Ronde.findDerniereRonde(con, tournoi.getId());
             if (rondeOuverte == null || rondeOuverte.isClose()) {
                 infoRonde.setText("Aucune ronde ouverte. Crée une ronde avant d’ajouter des matchs.");
                 disableForm();

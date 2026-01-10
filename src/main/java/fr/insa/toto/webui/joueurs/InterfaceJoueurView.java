@@ -34,14 +34,16 @@ public class InterfaceJoueurView extends VerticalLayout {
         setPadding(true);
         setSpacing(true);
 
-        if (!SessionInfo.userConnected()) {
+        if (SessionInfo.userConnected()==null) {
             add(new Paragraph("Vous devez être connecté pour accéder à cette page."));
             return;
         }
 
         try (Connection con = ConnectionPool.getConnection()) {
             // Récupérer le joueur correspondant à l'utilisateur connecté
-            String surnom = SessionInfo.curUser().get().getSurnom();
+            String surnom = SessionInfo.userConnected().getSurnom();
+
+
             joueurCourant = findJoueurBySurnom(con, surnom);
 
             if (joueurCourant == null) {

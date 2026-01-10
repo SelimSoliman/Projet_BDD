@@ -1,46 +1,73 @@
-/*
-Copyright 2000- Francois de Bertrand de Beuvron
-
-This file is part of CoursBeuvron.
-
-CoursBeuvron is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CoursBeuvron is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
- */
 package fr.insa.toto.webui;
 
-import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
-/**
- *
- * @author francois
- */
-@Route(value = "",layout=MainLayout.class)
+@Route(value = "", layout = MainLayout.class)
 @PageTitle("Teqball")
 public class VuePrincipale extends VerticalLayout {
 
     public VuePrincipale() {
-        this.add(new H2("Bienvenue au site officiel du tournoi de Teqball"));
-        this.add(new Paragraph ("Bienvenue sur la plateforme officielle du tournoi de Teqball.\n" +
-"Suivez l’évolution des matchs en temps réel, découvrez les équipes, consultez les classements et vivez chaque ronde du tournoi au plus près.\n" +
-"Les organisateurs disposent d’outils dédiés pour gérer les joueurs, les terrains et les résultats en toute simplicité.\n" +
-"Une expérience claire, rapide et pensée pour le jeu."));
-        
-        
-      
+        // page sans padding Vaadin
+        setPadding(false);
+        setSpacing(false);
+        setWidthFull();
+
+        // Container centré
+        Div container = new Div();
+        container.addClassName("container");
+
+        // HERO (carte)
+        Div hero = new Div();
+        hero.addClassName("hero");
+
+        H1 title = new H1("Bienvenue au site officiel du tournoi de Teqball");
+        Paragraph p = new Paragraph(
+                "Bienvenue sur la plateforme officielle du tournoi de Teqball. " +
+                "Suivez l’évolution des matchs en temps réel, découvrez les équipes, " +
+                "consultez les classements et vivez chaque ronde du tournoi au plus près. " +
+                "Les organisateurs disposent d’outils dédiés pour gérer les joueurs, " +
+                "les terrains et les résultats en toute simplicité. " +
+                "Une expérience claire, rapide et pensée pour le jeu."
+        );
+
+        Button cta = new Button("Voir le classement");
+        cta.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        // ✅ adapte si tu as une route "classement"
+        // cta.addClickListener(e -> getUI().ifPresent(ui -> ui.navigate("classement")));
+
+        hero.add(title, p, cta);
+
+        // STATS
+        Div stats = new Div();
+        stats.addClassName("stats");
+        stats.add(statCard("0", "Joueurs"));
+        stats.add(statCard("0", "Rondes"));
+        stats.add(statCard("0", "Matchs en cours"));
+
+        container.add(hero, stats);
+        add(container);
     }
 
+    private Div statCard(String value, String label) {
+        Div card = new Div();
+        card.addClassName("stat-card");
+
+        Div v = new Div();
+        v.addClassName("stat-value");
+        v.setText(value);
+
+        Div l = new Div();
+        l.addClassName("stat-label");
+        l.setText(label);
+
+        card.add(v, l);
+        return card;
+    }
 }

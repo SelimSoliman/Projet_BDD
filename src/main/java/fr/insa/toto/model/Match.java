@@ -246,6 +246,10 @@ public class Match extends ClasseMiroir {
             }
         }
     }
+    public static List<Match> tousLesMatchsDeLaRonde(Connection con, int rondeId) throws SQLException {
+    return matchsDeRonde(con, rondeId);
+}
+
 
     public static List<Match> matchsDeRonde(Connection con, int rondeId) throws SQLException {
         List<Match> res = new ArrayList<>();

@@ -17,8 +17,9 @@ import fr.insa.toto.model.TournoiMulti;
 import fr.insa.toto.model.Match;
 import fr.insa.toto.model.Ronde;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.extensions.ListeTournoisView;
 import fr.insa.toto.webui.session.SessionInfo;
-import fr.insa.toto.webui.tournois.ListeTournoisView;
+
 
 import java.sql.Connection;
 import java.sql.SQLException;

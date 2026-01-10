@@ -3,23 +3,21 @@ package fr.insa.toto.webui.session;
 import com.vaadin.flow.server.VaadinSession;
 import fr.insa.toto.model.TournoiMulti;
 import fr.insa.toto.model.Utilisateur;
+import java.util.Optional;
 
-/**
- * Classe pour gérer les informations de session (utilisateur connecté, tournoi actif).
- */
 public class SessionInfo {
 
     private static final String USER_ATTRIBUTE = "user";
     private static final String TOURNOI_ACTIF_ATTRIBUTE = "tournoiActif";
 
-    // ========== GESTION UTILISATEUR ==========
+    // ===== Utilisateur =====
 
     public static void setUserConnected(Utilisateur user) {
         VaadinSession.getCurrent().setAttribute(USER_ATTRIBUTE, user);
     }
 
     public static Utilisateur userConnected() {
-        return VaadinSession.getCurrent().getAttribute(Utilisateur.class);
+        return (Utilisateur) VaadinSession.getCurrent().getAttribute(USER_ATTRIBUTE);
     }
 
     public static boolean connected() {
@@ -31,34 +29,45 @@ public class SessionInfo {
         return user != null && user.isAdmin();
     }
 
+    
+    // ✅ AJOUT
+    public static void login(Utilisateur user) {
+        setUserConnected(user);
+    }
+
     public static void logout() {
         VaadinSession.getCurrent().setAttribute(USER_ATTRIBUTE, null);
         VaadinSession.getCurrent().setAttribute(TOURNOI_ACTIF_ATTRIBUTE, null);
     }
+public static Optional<Utilisateur> curUser() {
+    return Optional.ofNullable(userConnected());
+}
+   
 
-    // ========== GESTION TOURNOI ACTIF ==========
+    // ===== Tournoi actif =====
 
-    /**
-     * Définit le tournoi actif pour la session en cours.
-     * @param tournoi Le tournoi à définir comme actif (ou null pour désélectionner)
-     */
     public static void setTournoiActif(TournoiMulti tournoi) {
         VaadinSession.getCurrent().setAttribute(TOURNOI_ACTIF_ATTRIBUTE, tournoi);
     }
 
-    /**
-     * Récupère le tournoi actuellement actif.
-     * @return Le tournoi actif, ou null si aucun n'est sélectionné
-     */
     public static TournoiMulti getTournoiActif() {
-        return VaadinSession.getCurrent().getAttribute(TournoiMulti.class);
+        return (TournoiMulti) VaadinSession.getCurrent().getAttribute(TOURNOI_ACTIF_ATTRIBUTE);
     }
 
-    /**
-     * Vérifie si un tournoi est actuellement actif.
-     * @return true si un tournoi est actif, false sinon
-     */
     public static boolean tournoiActifExiste() {
         return getTournoiActif() != null;
     }
+    public static String getLogin() {
+    Utilisateur u = userConnected();
+    if (u == null) return null;
+
+    // adapte selon ton modèle Utilisateur :
+    // return u.getLogin();
+    // return u.getNom();
+    // return u.getPrenom();
+
+    return u.toString(); // fallback si tu n'as pas mieux
+}
+
+    
 }

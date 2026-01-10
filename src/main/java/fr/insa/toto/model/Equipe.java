@@ -127,6 +127,13 @@ protected PreparedStatement saveSansId(Connection con) throws SQLException {
 
     return ps;
 }
+public static List<Equipe> toutesLesEquipesDeLaRonde(Connection con, int idRonde)
+        throws SQLException {
+    // SELECT * FROM equipe WHERE ronde_id = ?
+        return null;
+    // SELECT * FROM equipe WHERE ronde_id = ?
+}
+
 
 
     /**

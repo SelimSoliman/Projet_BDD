@@ -18,9 +18,8 @@ public class Tournoi extends ClasseMiroir {
 
     private static final int TAILLE_EQUIPE_FIXE = 2;
 
-    public static void addItem(SideNavItem resultatMatch) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
+  
+    
 
     // --- paramètres généraux ---
     private String nom;
@@ -45,6 +44,22 @@ public Tournoi(int id, String nom, int nbTerrains, int nbJoueursParEquipe) {
     this.nom = nom;
     this.nbTerrains = nbTerrains;
     this.nbJoueursParEquipe = nbJoueursParEquipe;
+}
+public static Tournoi getInDB(Connection con, int idTournoi) throws SQLException {
+    String sql = "SELECT id, nom, nb_terrains, nb_joueurs_par_equipe FROM tournoi WHERE id = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, idTournoi);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (!rs.next()) return null;
+
+            return new Tournoi(
+                rs.getInt("id"),
+                rs.getString("nom"),
+                rs.getInt("nb_terrains"),
+                rs.getInt("nb_joueurs_par_equipe")
+            );
+        }
+    }
 }
 
  public static Tournoi getTournoiUnique(Connection con) throws SQLException {
@@ -197,7 +212,7 @@ public Tournoi(int id, String nom, int nbTerrains, int nbJoueursParEquipe) {
                                 + derniere.getNumero() + " n'est pas encore close.");
             }
         }
-        Ronde r = new Ronde(this, rondes.size() + 1);
+        Ronde r = new Ronde(this.getId(), rondes.size() + 1);
         rondes.add(r);
         return r;
     }

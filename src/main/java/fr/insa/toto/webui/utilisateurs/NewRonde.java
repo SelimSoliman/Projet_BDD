@@ -1,4 +1,4 @@
-package fr.insa.toto.webui.rondes;
+package fr.insa.toto.webui.utilisateurs;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -13,8 +13,9 @@ import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.TournoiMulti;
 import fr.insa.toto.model.Ronde;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.extensions.ListeTournoisView;
 import fr.insa.toto.webui.session.SessionInfo;
-import fr.insa.toto.webui.tournois.ListeTournoisView;
+
 
 import java.sql.Connection;
 import java.sql.SQLException;

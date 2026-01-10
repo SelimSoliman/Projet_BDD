@@ -48,6 +48,22 @@ public class Joueur extends ClasseMiroir {
         this.sexe = sexe;
         this.dateNaissance = dateNaissance;
     }
+ public static Joueur fromResultSet(ResultSet rs) throws SQLException {
+    java.sql.Date d = rs.getDate("date_naissance");
+
+    return new Joueur(
+        rs.getInt("id"),
+        rs.getString("surnom"),
+        rs.getString("categorie"),
+        rs.getInt("taillecm"),
+        rs.getString("nom"),
+        rs.getString("prenom"),
+        rs.getString("sexe"),
+        (d == null) ? null : d.toLocalDate()
+    );
+}
+
+
 
     @Override
     protected PreparedStatement saveSansId(Connection con) throws SQLException {

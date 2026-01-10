@@ -14,6 +14,7 @@ import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.TournoiMulti;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.extensions.ListeTournoisView;
 import fr.insa.toto.webui.session.SessionInfo;
 
 import java.sql.Connection;
