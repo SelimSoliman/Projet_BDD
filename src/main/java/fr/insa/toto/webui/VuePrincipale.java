@@ -8,6 +8,16 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import fr.insa.beuvron.utils.database.ConnectionPool;
+import fr.insa.toto.model.Joueur;
+import fr.insa.toto.model.Match;
+import fr.insa.toto.model.Tournoi;
+import fr.insa.toto.webui.utilisateurs.ClassementView;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 @Route(value = "", layout = MainLayout.class)
 @PageTitle("Teqball")
@@ -30,29 +40,78 @@ public class VuePrincipale extends VerticalLayout {
         H1 title = new H1("Bienvenue au site officiel du tournoi de Teqball");
         Paragraph p = new Paragraph(
                 "Bienvenue sur la plateforme officielle du tournoi de Teqball. " +
-                "Suivez l’évolution des matchs en temps réel, découvrez les équipes, " +
+                "Suivez l'évolution des matchs en temps réel, découvrez les équipes, " +
                 "consultez les classements et vivez chaque ronde du tournoi au plus près. " +
-                "Les organisateurs disposent d’outils dédiés pour gérer les joueurs, " +
+                "Les organisateurs disposent d'outils dédiés pour gérer les joueurs, " +
                 "les terrains et les résultats en toute simplicité. " +
                 "Une expérience claire, rapide et pensée pour le jeu."
         );
 
         Button cta = new Button("Voir le classement");
         cta.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        // ✅ adapte si tu as une route "classement"
-        // cta.addClickListener(e -> getUI().ifPresent(ui -> ui.navigate("classement")));
+        cta.addClickListener(e -> getUI().ifPresent(ui -> ui.navigate(ClassementView.class)));
 
         hero.add(title, p, cta);
 
-        // STATS
+        // STATS - Récupération depuis la BDD
+        int nbJoueurs = 0;
+        int nbRondes = 0;
+        int nbMatchsEnCours = 0;
+
+        try (Connection con = ConnectionPool.getConnection()) {
+            // Nombre de joueurs
+            nbJoueurs = Joueur.count(con);
+
+            // Nombre de rondes (tournoi unique)
+            Tournoi tournoi = Tournoi.getTournoiUnique(con);
+            if (tournoi != null) {
+                nbRondes = compterRondes(con, tournoi.getId());
+                nbMatchsEnCours = compterMatchsEnCours(con);
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            // En cas d'erreur, on garde les valeurs à 0
+        }
+
         Div stats = new Div();
         stats.addClassName("stats");
-        stats.add(statCard("0", "Joueurs"));
-        stats.add(statCard("0", "Rondes"));
-        stats.add(statCard("0", "Matchs en cours"));
+        stats.add(statCard(String.valueOf(nbJoueurs), "Joueurs"));
+        stats.add(statCard(String.valueOf(nbRondes), "Rondes"));
+        stats.add(statCard(String.valueOf(nbMatchsEnCours), "Matchs en cours"));
 
         container.add(hero, stats);
         add(container);
+    }
+
+    /**
+     * Compte le nombre total de rondes pour un tournoi
+     */
+    private int compterRondes(Connection con, int tournoiId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM ronde WHERE id_tournoi = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, tournoiId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Compte le nombre de matchs EN_COURS dans toute la base
+     */
+    private int compterMatchsEnCours(Connection con) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM matchs WHERE statut = 'EN_COURS'";
+        try (PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
     }
 
     private Div statCard(String value, String label) {

@@ -16,9 +16,9 @@ import fr.insa.toto.webui.MainLayout;
 import fr.insa.toto.webui.extensions.ListeTournoisView;
 import fr.insa.toto.webui.session.SessionInfo;
 
-
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Vue pour créer une nouvelle ronde sur le tournoi actif.
@@ -44,8 +44,12 @@ public class NewRonde extends VerticalLayout {
 
         add(new H2("Créer une nouvelle ronde"));
 
-        // Vérifier qu'un tournoi est actif
+        // ✅ AMÉLIORATION : Auto-sélection si un seul tournoi existe
         TournoiMulti tournoiActif = SessionInfo.getTournoiActif();
+        
+        if (tournoiActif == null) {
+            tournoiActif = essayerAutoSelection();
+        }
 
         if (tournoiActif == null) {
             // Aucun tournoi actif
@@ -97,6 +101,35 @@ public class NewRonde extends VerticalLayout {
             getUI().ifPresent(ui -> ui.navigate(ListeTournoisView.class));
         });
         add(changerTournoiButton);
+    }
+
+    /**
+     * ✅ NOUVEAU : Essaie de sélectionner automatiquement un tournoi
+     * si un seul tournoi existe
+     */
+    private TournoiMulti essayerAutoSelection() {
+        try (Connection con = ConnectionPool.getConnection()) {
+            List<TournoiMulti> tournois = TournoiMulti.tousLesTournois(con);
+            
+            if (tournois.size() == 1) {
+                // Un seul tournoi existe → sélection automatique
+                TournoiMulti unique = tournois.get(0);
+                SessionInfo.setTournoiActif(unique);
+                
+                Notification.show(
+                    "ℹ️ Tournoi sélectionné automatiquement : " + unique.getNom(),
+                    4000,
+                    Notification.Position.MIDDLE
+                ).addThemeVariants(NotificationVariant.LUMO_CONTRAST);
+                
+                return unique;
+            }
+            
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        
+        return null;
     }
 
     private void creerRonde() {

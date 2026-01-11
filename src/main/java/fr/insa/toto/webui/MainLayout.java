@@ -52,9 +52,9 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver {
             return new HorizontalLayout();
         }
 
-       String username = SessionInfo.curUser()
-        .map(Utilisateur::getSurnom)
-        .orElse("Compte");
+        String username = SessionInfo.curUser()
+            .map(Utilisateur::getSurnom)
+            .orElse("Compte");
 
         MenuBar menu = new MenuBar();
         menu.addClassName("user-menu");

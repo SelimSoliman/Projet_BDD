@@ -4,15 +4,23 @@ import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.component.icon.VaadinIcon;
 
-
-
 import fr.insa.toto.webui.session.SessionInfo;
 
 // vues utilisateurs
 import fr.insa.toto.webui.utilisateurs.CreationAdmin;
 import fr.insa.toto.webui.utilisateurs.ListeUtilisateurs;
 
-// vues joueur
+// ✅ vues joueurs (AJOUT)
+import fr.insa.toto.webui.joueurs.CreationJoueurView;
+import fr.insa.toto.webui.joueurs.ListeJoueursView;
+
+// ✅ vues équipes (AJOUT)
+import fr.insa.toto.webui.extensions.GestionEquipesView;
+
+// ✅ vues rondes/matchs (AJOUT)
+import fr.insa.toto.webui.extensions.GestionRondesMatchsView;
+
+// vues joueur espace perso
 import fr.insa.toto.webui.joueurs.InterfaceJoueurView;
 
 // vues tournois / extensions
@@ -42,6 +50,23 @@ public class MainMenu extends SideNav {
             utilisateurs.addItem(new SideNavItem("Création", CreationAdmin.class));
         }
 
+        /* ===== ✅ JOUEURS (NOUVEAU) ===== */
+        SideNavItem joueurs = new SideNavItem("Joueurs");
+        joueurs.addItem(new SideNavItem("Créer un joueur", CreationJoueurView.class));
+        joueurs.addItem(new SideNavItem("Liste des joueurs", ListeJoueursView.class));
+
+        /* ===== ✅ ÉQUIPES (NOUVEAU) ===== */
+        SideNavItem equipes = new SideNavItem("Équipes");
+        if (SessionInfo.adminConnected()) {
+            equipes.addItem(new SideNavItem("Gestion des équipes", GestionEquipesView.class));
+        }
+
+        /* ===== ✅ RONDES/MATCHS (NOUVEAU) ===== */
+        SideNavItem rondesMatchs = new SideNavItem("Rondes / Matchs");
+        if (SessionInfo.adminConnected()) {
+            rondesMatchs.addItem(new SideNavItem("Gestion rondes et matchs", GestionRondesMatchsView.class));
+        }
+
         /* ===== TOURNOIS ===== */
         SideNavItem tournois = new SideNavItem("Tournois");
         tournois.addItem(new SideNavItem("Liste des tournois", ListeTournoisView.class));
@@ -61,6 +86,19 @@ public class MainMenu extends SideNav {
         /* ===== ASSEMBLAGE DU MENU ===== */
         addItem(accueil, utilisateurs);
 
+        // ✅ AJOUT de la section Joueurs
+        addItem(joueurs);
+
+        // ✅ AJOUT de la section Équipes
+        if (SessionInfo.adminConnected()) {
+            addItem(equipes);
+        }
+
+        // ✅ AJOUT de la section Rondes/Matchs
+        if (SessionInfo.adminConnected()) {
+            addItem(rondesMatchs);
+        }
+
         if (SessionInfo.connected()) {
             addItem(new SideNavItem("Mon Espace Joueur", InterfaceJoueurView.class));
         }
@@ -79,5 +117,4 @@ public class MainMenu extends SideNav {
             addItem(templates);
         }
     }
-
 }
