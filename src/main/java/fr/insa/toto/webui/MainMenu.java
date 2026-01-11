@@ -2,7 +2,6 @@ package fr.insa.toto.webui;
 
 import com.vaadin.flow.component.sidenav.SideNav;
 import com.vaadin.flow.component.sidenav.SideNavItem;
-import com.vaadin.flow.component.icon.VaadinIcon;
 
 import fr.insa.toto.webui.session.SessionInfo;
 
@@ -20,6 +19,9 @@ import fr.insa.toto.webui.extensions.GestionEquipesView;
 // ✅ vues rondes/matchs (AJOUT)
 import fr.insa.toto.webui.extensions.GestionRondesMatchsView;
 
+// ✅ vue initialisation données (AJOUT)
+import fr.insa.toto.webui.extensions.InitialisationDonneesView;
+
 // vues joueur espace perso
 import fr.insa.toto.webui.joueurs.InterfaceJoueurView;
 
@@ -27,6 +29,8 @@ import fr.insa.toto.webui.joueurs.InterfaceJoueurView;
 import fr.insa.toto.webui.extensions.ListeTournoisView;
 import fr.insa.toto.webui.extensions.ClassementGlobalView;
 import fr.insa.toto.webui.extensions.GestionTerrainsView;
+import fr.insa.toto.webui.extensions.CreationTerrainView;
+import fr.insa.toto.webui.extensions.ListeTerrainsView;
 import fr.insa.toto.webui.extensions.GestionTypesJeuView;
 import fr.insa.toto.webui.extensions.GestionTemplatesView;
 
@@ -79,7 +83,9 @@ public class MainMenu extends SideNav {
 
         /* ===== TERRAINS ===== */
         SideNavItem terrains = new SideNavItem("Terrains");
+        terrains.addItem(new SideNavItem("Liste des terrains", ListeTerrainsView.class));
         if (SessionInfo.adminConnected()) {
+            terrains.addItem(new SideNavItem("Créer un terrain", CreationTerrainView.class));
             terrains.addItem(new SideNavItem("Gestion avec plan", GestionTerrainsView.class));
         }
 
@@ -104,9 +110,9 @@ public class MainMenu extends SideNav {
         }
 
         addItem(tournois);
+        addItem(terrains);
 
         if (SessionInfo.adminConnected()) {
-            addItem(terrains);
 
             SideNavItem typesJeu = new SideNavItem("Types de Jeu");
             typesJeu.addItem(new SideNavItem("Gestion", GestionTypesJeuView.class));
@@ -115,6 +121,10 @@ public class MainMenu extends SideNav {
             SideNavItem templates = new SideNavItem("Templates");
             templates.addItem(new SideNavItem("Gestion des templates", GestionTemplatesView.class));
             addItem(templates);
+
+            SideNavItem admin = new SideNavItem("Administration");
+            admin.addItem(new SideNavItem("Initialisation des données", InitialisationDonneesView.class));
+            addItem(admin);
         }
     }
 }

@@ -1,166 +1,487 @@
-
 package fr.insa.toto.webui.extensions;
 
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.H2;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Image;
-import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.*;
 import fr.insa.toto.webui.MainLayout;
-import fr.insa.toto.webui.session.SessionInfo;
 
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Route(value = "terrains", layout = MainLayout.class)
-@PageTitle("Gestion des terrains")
-
-
+@Route(value = "terrains/gestion-plan", layout = MainLayout.class)
+@PageTitle("Gestion avec plan")
 public class GestionTerrainsView extends VerticalLayout {
 
-    private Grid<TerrainAvecPlan> grid;
-    private FormLayout formTerrain;
-    private TextField nomField;
-    private TextField descriptionField;
-    private Upload uploadPlan;
-    private Button sauvegarder;
+    private Div planContainer;
+    private Paragraph infoBox;
 
     public GestionTerrainsView() {
-        if (!SessionInfo.adminConnected()) {
-            add(new Paragraph("Accès réservé aux administrateurs."));
-            return;
-        }
-
         setPadding(true);
         setSpacing(true);
 
-        add(new H2("Gestion des terrains avec plan"));
+        add(new H2("🏟️ Plan des terrains - Vue interactive"));
 
-        // Formulaire
-        formTerrain = new FormLayout();
-        nomField = new TextField("Nom du terrain");
-        descriptionField = new TextField("Description");
+        infoBox = new Paragraph("Cliquez sur un terrain pour voir les matchs en cours");
+        infoBox.getStyle()
+            .set("background-color", "#e3f2fd")
+            .set("padding", "12px")
+            .set("border-radius", "6px")
+            .set("border-left", "4px solid #2196f3")
+            .set("margin-bottom", "20px");
+        add(infoBox);
+
+        Button refreshButton = new Button("🔄 Rafraîchir", e -> chargerPlan());
+        refreshButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
+        add(refreshButton);
+
+        planContainer = new Div();
+        planContainer.getStyle()
+            .set("display", "grid")
+            .set("grid-template-columns", "repeat(auto-fill, minmax(220px, 1fr))")
+            .set("gap", "20px")
+            .set("padding", "20px")
+            .set("background-color", "#f5f5f5")
+            .set("border-radius", "8px")
+            .set("min-height", "300px");
         
-        MemoryBuffer buffer = new MemoryBuffer();
-        uploadPlan = new Upload(buffer);
-        uploadPlan.setAcceptedFileTypes("image/*", "application/pdf");
-        uploadPlan.setMaxFiles(1);
+        add(planContainer);
 
-        sauvegarder = new Button("Enregistrer");
-        sauvegarder.addClickListener(e -> sauvegarderTerrain(buffer));
+        chargerPlan();
+    }
 
-        formTerrain.add(nomField, descriptionField, uploadPlan, sauvegarder);
-        add(formTerrain);
+    private void chargerPlan() {
+        planContainer.removeAll();
 
-        // Grille des terrains
-        add(new H3("Terrains existants"));
-        grid = new Grid<>(TerrainAvecPlan.class, false);
-        grid.addColumn(TerrainAvecPlan::getId).setHeader("ID");
-        grid.addColumn(TerrainAvecPlan::getNom).setHeader("Nom");
-        grid.addColumn(TerrainAvecPlan::getDescription).setHeader("Description");
-        grid.addColumn(t -> t.getCheminPlan() != null ? "Oui" : "Non")
-            .setHeader("Plan disponible");
-        grid.addColumn(t -> t.estDisponible() ? "Disponible" : "Occupé")
-            .setHeader("Statut");
+        try (Connection con = ConnectionPool.getConnection()) {
+            List<Terrain> terrains = Terrain.tousLesTerrains(con);
 
-        // Affichage du plan au clic
-        grid.addItemClickListener(event -> {
-            TerrainAvecPlan t = event.getItem();
-            if (t.getCheminPlan() != null) {
-                afficherPlan(t);
+            if (terrains.isEmpty()) {
+                Paragraph empty = new Paragraph("Aucun terrain créé. Créez des terrains d'abord !");
+                empty.getStyle()
+                    .set("text-align", "center")
+                    .set("color", "#666")
+                    .set("padding", "40px");
+                planContainer.add(empty);
+                return;
+            }
+
+            for (Terrain terrain : terrains) {
+                planContainer.add(creerCarteTerrain(con, terrain));
+            }
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            Notification.show("❌ Erreur : " + ex.getMessage(), 
+                            5000, Notification.Position.MIDDLE)
+                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        }
+    }
+
+    private Div creerCarteTerrain(Connection con, Terrain terrain) throws SQLException {
+        Div carte = new Div();
+        
+        // Récupérer le match en cours sur ce terrain
+        MatchInfo matchEnCours = getMatchEnCours(con, terrain.getId());
+        
+        boolean occupe = matchEnCours != null;
+        
+        carte.getStyle()
+            .set("background-color", occupe ? "#fff3cd" : "#d4edda")
+            .set("border", occupe ? "3px solid #ff9800" : "3px solid #28a745")
+            .set("border-radius", "8px")
+            .set("padding", "15px")
+            .set("cursor", "pointer")
+            .set("transition", "transform 0.2s, box-shadow 0.2s")
+            .set("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+
+        carte.addClickListener(e -> {
+            if (occupe) {
+                afficherMatchDialog(matchEnCours);
             } else {
-                Notification.show("Aucun plan disponible pour ce terrain");
+                Notification.show("🟢 Terrain libre : " + terrain.getNom(), 
+                                2000, Notification.Position.MIDDLE);
             }
         });
 
-        add(grid);
-        chargerTerrains();
+        // Effet hover
+        carte.getElement().addEventListener("mouseenter", ev -> {
+            carte.getStyle()
+                .set("transform", "translateY(-5px)")
+                .set("box-shadow", "0 6px 12px rgba(0,0,0,0.15)");
+        });
+        
+        carte.getElement().addEventListener("mouseleave", ev -> {
+            carte.getStyle()
+                .set("transform", "translateY(0)")
+                .set("box-shadow", "0 2px 4px rgba(0,0,0,0.1)");
+        });
+
+        // Contenu de la carte
+        H3 titre = new H3("🏟️ " + terrain.getNom());
+        titre.getStyle()
+            .set("margin", "0 0 10px 0")
+            .set("font-size", "18px")
+            .set("color", "#333");
+        
+        Paragraph statut = new Paragraph(occupe ? "🔴 Match en cours" : "🟢 Disponible");
+        statut.getStyle()
+            .set("margin", "0")
+            .set("font-weight", "bold")
+            .set("color", occupe ? "#d84315" : "#2e7d32");
+
+        carte.add(titre, statut);
+
+        if (occupe) {
+            Paragraph infoMatch = new Paragraph("Ronde " + matchEnCours.getRondeNumero() + 
+                                               " | Cliquez pour détails");
+            infoMatch.getStyle()
+                .set("margin", "8px 0 0 0")
+                .set("font-size", "12px")
+                .set("color", "#666")
+                .set("font-style", "italic");
+            carte.add(infoMatch);
+        }
+
+        return carte;
     }
 
-    private void chargerTerrains() {
+    private MatchInfo getMatchEnCours(Connection con, int terrainId) throws SQLException {
+        String sql = "SELECT m.id, m.score_equipe1, m.score_equipe2, m.statut, " +
+                    "r.numero as ronde_num, t.nom as terrain_nom " +
+                    "FROM matchs m " +
+                    "INNER JOIN ronde r ON m.ronde_id = r.id " +
+                    "INNER JOIN terrain t ON m.terrain_id = t.id " +
+                    "WHERE m.terrain_id = ? AND m.statut != 'clos' " +
+                    "ORDER BY r.debut DESC LIMIT 1";
+        
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, terrainId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new MatchInfo(
+                        rs.getInt("id"),
+                        rs.getInt("ronde_num"),
+                        rs.getString("terrain_nom"),
+                        rs.getInt("score_equipe1"),
+                        rs.getInt("score_equipe2")
+                    );
+                }
+            }
+        }
+        return null;
+    }
+
+    private void afficherMatchDialog(MatchInfo matchInfo) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("🏆 Match en cours - Ronde " + matchInfo.getRondeNumero());
+        dialog.setWidth("700px");
+
+        VerticalLayout layout = new VerticalLayout();
+        layout.setPadding(false);
+        layout.setSpacing(true);
+
+        // Info match
+        Div matchBox = new Div();
+        matchBox.getStyle()
+            .set("background-color", "#fff3cd")
+            .set("padding", "15px")
+            .set("border-radius", "8px")
+            .set("margin-bottom", "15px");
+        
+        H4 matchTitle = new H4("⚽ Match #" + matchInfo.getMatchId());
+        matchTitle.getStyle().set("margin", "0 0 10px 0");
+        
+        Paragraph score = new Paragraph("Score actuel : " + 
+                                       matchInfo.getScoreEquipe1() + " - " + 
+                                       matchInfo.getScoreEquipe2());
+        score.getStyle()
+            .set("margin", "0")
+            .set("font-size", "18px")
+            .set("font-weight", "bold");
+        
+        matchBox.add(matchTitle, score);
+        layout.add(matchBox);
+
         try (Connection con = ConnectionPool.getConnection()) {
-            List<TerrainAvecPlan> terrains = TerrainAvecPlan.tousLesTerrainsAvecPlan(con);
-            grid.setItems(terrains);
+            // Récupérer les équipes
+            List<EquipeInfo> equipes = getEquipesDuMatch(con, matchInfo.getMatchId());
+            
+            if (equipes.isEmpty()) {
+                layout.add(new Paragraph("⚠️ Aucune équipe trouvée pour ce match"));
+            } else {
+                H4 equipesTitle = new H4("👥 Équipes participantes");
+                layout.add(equipesTitle);
+                
+                for (int i = 0; i < equipes.size(); i++) {
+                    EquipeInfo equipe = equipes.get(i);
+                    int equipeNum = i + 1;
+                    
+                    Div equipeCard = creerCarteEquipe(con, equipe, equipeNum, 
+                                                     equipeNum == 1 ? matchInfo.getScoreEquipe1() : 
+                                                     matchInfo.getScoreEquipe2());
+                    layout.add(equipeCard);
+                }
+            }
+            
         } catch (SQLException ex) {
             ex.printStackTrace();
-            Notification.show("Erreur de chargement : " + ex.getMessage());
+            layout.add(new Paragraph("❌ Erreur : " + ex.getMessage()));
         }
+
+        Button fermerButton = new Button("Fermer", e -> dialog.close());
+        fermerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        layout.add(fermerButton);
+
+        dialog.add(layout);
+        dialog.open();
     }
 
-    private void sauvegarderTerrain(MemoryBuffer buffer) {
-        String nom = nomField.getValue();
-        String description = descriptionField.getValue();
+    private Div creerCarteEquipe(Connection con, EquipeInfo equipe, int equipeNum, int score) 
+            throws SQLException {
+        Div card = new Div();
+        card.getStyle()
+            .set("background-color", equipeNum == 1 ? "#e3f2fd" : "#f3e5f5")
+            .set("border", "2px solid " + (equipeNum == 1 ? "#2196f3" : "#9c27b0"))
+            .set("border-radius", "8px")
+            .set("padding", "15px")
+            .set("margin-bottom", "10px")
+            .set("cursor", "pointer")
+            .set("transition", "transform 0.2s");
 
-        if (nom == null || nom.isBlank()) {
-            Notification.show("Le nom est obligatoire");
-            return;
+        card.addClickListener(e -> afficherJoueursDialog(equipe.getEquipeId(), equipeNum));
+
+        card.getElement().addEventListener("mouseenter", ev -> {
+            card.getStyle().set("transform", "scale(1.02)");
+        });
+        
+        card.getElement().addEventListener("mouseleave", ev -> {
+            card.getStyle().set("transform", "scale(1)");
+        });
+
+        HorizontalLayout header = new HorizontalLayout();
+        header.setWidthFull();
+        header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+        
+        H5 titre = new H5("👥 Équipe " + equipeNum + " - ID: " + equipe.getEquipeId());
+        titre.getStyle().set("margin", "0");
+        
+        Span scoreSpan = new Span("Score: " + score);
+        scoreSpan.getStyle()
+            .set("font-size", "18px")
+            .set("font-weight", "bold")
+            .set("color", "#333");
+        
+        header.add(titre, scoreSpan);
+        card.add(header);
+
+        // Afficher les joueurs
+        List<JoueurInfo> joueurs = getJoueursEquipe(con, equipe.getEquipeId());
+        if (!joueurs.isEmpty()) {
+            Paragraph joueursText = new Paragraph("Joueurs : " + 
+                joueurs.stream()
+                    .map(JoueurInfo::getNom)
+                    .collect(Collectors.joining(", ")));
+            joueursText.getStyle()
+                .set("margin", "8px 0 0 0")
+                .set("font-size", "14px")
+                .set("color", "#555");
+            card.add(joueursText);
         }
+
+        Paragraph cliquez = new Paragraph("👆 Cliquez pour voir les détails des joueurs");
+        cliquez.getStyle()
+            .set("margin", "8px 0 0 0")
+            .set("font-size", "12px")
+            .set("font-style", "italic")
+            .set("color", "#999");
+        card.add(cliquez);
+
+        return card;
+    }
+
+    private void afficherJoueursDialog(int equipeId, int equipeNum) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("👥 Joueurs de l'équipe " + equipeNum);
+        dialog.setWidth("800px");
+
+        VerticalLayout layout = new VerticalLayout();
 
         try (Connection con = ConnectionPool.getConnection()) {
-            TerrainAvecPlan terrain = new TerrainAvecPlan(nom, description);
-            terrain.saveInDB(con);
-
-            // Upload du fichier
-            InputStream inputStream = buffer.getInputStream();
-            if (inputStream != null) {
-                String fileName = buffer.getFileName();
-                String extension = fileName.substring(fileName.lastIndexOf("."));
-                String cheminPlan = "terrains/" + terrain.getId() + extension;
-
-                // Créer le dossier si nécessaire
-                Path dossier = Path.of("uploads/terrains");
-                Files.createDirectories(dossier);
-
-                // Copier le fichier
-                Path destination = dossier.resolve(terrain.getId() + extension);
-                Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
-
-                // Mettre à jour en BD
-                terrain.updatePlan(con, cheminPlan);
+            List<JoueurInfo> joueurs = getJoueursEquipe(con, equipeId);
+            
+            if (joueurs.isEmpty()) {
+                layout.add(new Paragraph("⚠️ Aucun joueur dans cette équipe"));
+            } else {
+                Grid<JoueurInfo> grid = new Grid<>(JoueurInfo.class, false);
+                
+                grid.addColumn(JoueurInfo::getId)
+                    .setHeader("ID")
+                    .setAutoWidth(true);
+                
+                grid.addColumn(JoueurInfo::getNom)
+                    .setHeader("Nom")
+                    .setAutoWidth(true);
+                
+                grid.addColumn(JoueurInfo::getPrenom)
+                    .setHeader("Prénom")
+                    .setAutoWidth(true);
+                
+                grid.addColumn(j -> j.getSexe().equals("M") ? "👨 Homme" : "👩 Femme")
+                    .setHeader("Sexe")
+                    .setAutoWidth(true);
+                
+                grid.addColumn(JoueurInfo::getNiveau)
+                    .setHeader("Niveau")
+                    .setAutoWidth(true);
+                
+                grid.addColumn(j -> j.getTaille() + " cm")
+                    .setHeader("Taille")
+                    .setAutoWidth(true);
+                
+                grid.setItems(joueurs);
+                grid.setHeight("400px");
+                
+                layout.add(grid);
             }
-
-            Notification.show("Terrain enregistré !");
-            nomField.clear();
-            descriptionField.clear();
-            chargerTerrains();
-
-        } catch (Exception ex) {
+            
+        } catch (SQLException ex) {
             ex.printStackTrace();
-            Notification.show("Erreur : " + ex.getMessage());
+            layout.add(new Paragraph("❌ Erreur : " + ex.getMessage()));
         }
+
+        Button fermerButton = new Button("Fermer", e -> dialog.close());
+        fermerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        layout.add(fermerButton);
+
+        dialog.add(layout);
+        dialog.open();
     }
 
-    private void afficherPlan(TerrainAvecPlan terrain) {
-        VerticalLayout dialog = new VerticalLayout();
-        dialog.add(new H3("Plan : " + terrain.getNom()));
+    private List<EquipeInfo> getEquipesDuMatch(Connection con, int matchId) throws SQLException {
+        List<EquipeInfo> equipes = new ArrayList<>();
+        
+        String sql = "SELECT DISTINCT e.id, e.nom " +
+                    "FROM equipe e " +
+                    "INNER JOIN matchs m ON (m.equipe1_id = e.id OR m.equipe2_id = e.id) " +
+                    "WHERE m.id = ?";
+        
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, matchId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    equipes.add(new EquipeInfo(
+                        rs.getInt("id"),
+                        rs.getString("nom")
+                    ));
+                }
+            }
+        }
+        
+        return equipes;
+    }
 
-        String chemin = terrain.getCheminPlan();
-        if (chemin.endsWith(".pdf")) {
-            dialog.add(new Paragraph("Fichier PDF - Téléchargez le plan pour le visualiser"));
-            // Possibilité d'ajouter un lien de téléchargement
-        } else {
-            Image img = new Image("uploads/" + chemin, "Plan du terrain");
-            img.setMaxWidth("800px");
-            dialog.add(img);
+    private List<JoueurInfo> getJoueursEquipe(Connection con, int equipeId) throws SQLException {
+        List<JoueurInfo> joueurs = new ArrayList<>();
+        
+        String sql = "SELECT j.id, j.nom, j.prenom, j.sexe, j.niveau, j.taille " +
+                    "FROM joueur j " +
+                    "INNER JOIN contient c ON c.joueur_id = j.id " +
+                    "WHERE c.equipe_id = ?";
+        
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, equipeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    joueurs.add(new JoueurInfo(
+                        rs.getInt("id"),
+                        rs.getString("nom"),
+                        rs.getString("prenom"),
+                        rs.getString("sexe"),
+                        rs.getInt("niveau"),
+                        rs.getInt("taille")
+                    ));
+                }
+            }
+        }
+        
+        return joueurs;
+    }
+
+    // Classes internes pour stocker les informations
+    private static class MatchInfo {
+        private final int matchId;
+        private final int rondeNumero;
+        private final String terrainNom;
+        private final int scoreEquipe1;
+        private final int scoreEquipe2;
+
+        public MatchInfo(int matchId, int rondeNumero, String terrainNom, 
+                        int scoreEquipe1, int scoreEquipe2) {
+            this.matchId = matchId;
+            this.rondeNumero = rondeNumero;
+            this.terrainNom = terrainNom;
+            this.scoreEquipe1 = scoreEquipe1;
+            this.scoreEquipe2 = scoreEquipe2;
         }
 
-        // Afficher dans une notification ou un dialog
-        Notification.show(terrain.getNom() + " : voir le plan dans les fichiers uploadés");
+        public int getMatchId() { return matchId; }
+        public int getRondeNumero() { return rondeNumero; }
+        public String getTerrainNom() { return terrainNom; }
+        public int getScoreEquipe1() { return scoreEquipe1; }
+        public int getScoreEquipe2() { return scoreEquipe2; }
+    }
+
+    private static class EquipeInfo {
+        private final int equipeId;
+        private final String nom;
+
+        public EquipeInfo(int equipeId, String nom) {
+            this.equipeId = equipeId;
+            this.nom = nom;
+        }
+
+        public int getEquipeId() { return equipeId; }
+        public String getNom() { return nom; }
+    }
+
+    private static class JoueurInfo {
+        private final int id;
+        private final String nom;
+        private final String prenom;
+        private final String sexe;
+        private final int niveau;
+        private final int taille;
+
+        public JoueurInfo(int id, String nom, String prenom, String sexe, 
+                         int niveau, int taille) {
+            this.id = id;
+            this.nom = nom;
+            this.prenom = prenom;
+            this.sexe = sexe;
+            this.niveau = niveau;
+            this.taille = taille;
+        }
+
+        public int getId() { return id; }
+        public String getNom() { return nom; }
+        public String getPrenom() { return prenom; }
+        public String getSexe() { return sexe; }
+        public int getNiveau() { return niveau; }
+        public int getTaille() { return taille; }
     }
 }
