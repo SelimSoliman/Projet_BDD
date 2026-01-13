@@ -106,18 +106,40 @@ public class ListeJoueursView extends VerticalLayout {
             .setHeader("Âge")
             .setAutoWidth(true);
 
-        // Colonne Actions avec bouton de suppression
+        // Colonne Actions avec boutons
         grid.addComponentColumn(joueur -> {
-            Button deleteButton = new Button("🗑️ Supprimer");
+            HorizontalLayout actions = new HorizontalLayout();
+            
+            // Bouton "Voir détails"
+            Button detailButton = new Button("👁️ Détails");
+            detailButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
+            detailButton.addClickListener(e -> {
+                getUI().ifPresent(ui -> ui.navigate("joueurs/detail/" + joueur.getId()));
+            });
+            
+            // Bouton "Supprimer"
+            Button deleteButton = new Button("🗑️");
             deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
             deleteButton.addClickListener(e -> supprimerJoueur(joueur));
-            return deleteButton;
-        }).setHeader("Actions");
+            
+            actions.add(detailButton, deleteButton);
+            actions.setSpacing(true);
+            return actions;
+        }).setHeader("Actions").setAutoWidth(true);
 
+        // Rendre les lignes cliquables
+        grid.addItemClickListener(event -> {
+            Joueur joueur = event.getItem();
+            getUI().ifPresent(ui -> ui.navigate("joueurs/detail/" + joueur.getId()));
+        });
+
+        // Style pour indiquer que les lignes sont cliquables
+        grid.addClassName("clickable-grid");
+        
         add(grid);
 
         // Aide
-        Paragraph aide = new Paragraph("💡 Cliquez sur les en-têtes pour trier les colonnes");
+        Paragraph aide = new Paragraph("💡 Cliquez sur un joueur pour voir ses détails et matchs, ou sur les boutons d'action");
         aide.getStyle()
             .set("color", "#666")
             .set("font-style", "italic")
