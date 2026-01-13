@@ -23,8 +23,8 @@ public List<Joueur> getJoueursInscrits(Connection con) throws SQLException {
     String sql = """
         SELECT j.id, j.surnom, j.categorie, j.taillecm, j.nom, j.prenom, j.sexe, j.date_naissance
         FROM joueur j
-        JOIN inscription_tournoi it ON it.joueur_id = j.id
-        WHERE it.tournoi_id = ?
+        JOIN inscription_tournoi it ON it.id_joueur = j.id
+        WHERE it.id_tournoi = ?
         """;
 
     try (PreparedStatement pst = con.prepareStatement(sql)) {
@@ -38,6 +38,28 @@ public List<Joueur> getJoueursInscrits(Connection con) throws SQLException {
 
     return res;
 }
+
+    /**
+     * Inscrit automatiquement tous les joueurs de la base au tournoi.
+     * Utile pour la création rapide de rondes.
+     */
+    public void inscrireTousLesJoueurs(Connection con) throws SQLException {
+        String sqlJoueurs = "SELECT id FROM joueur";
+        String sqlInsert = "INSERT IGNORE INTO inscription_tournoi (id_tournoi, id_joueur) VALUES (?, ?)";
+        
+        try (PreparedStatement psSelect = con.prepareStatement(sqlJoueurs);
+             PreparedStatement psInsert = con.prepareStatement(sqlInsert)) {
+            
+            try (ResultSet rs = psSelect.executeQuery()) {
+                while (rs.next()) {
+                    int idJoueur = rs.getInt("id");
+                    psInsert.setInt(1, this.getId());
+                    psInsert.setInt(2, idJoueur);
+                    psInsert.executeUpdate();
+                }
+            }
+        }
+    }
 
     public enum StatutTournoi {
         A_VENIR,

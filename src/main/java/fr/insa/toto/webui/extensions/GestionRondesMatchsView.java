@@ -350,6 +350,9 @@ public class GestionRondesMatchsView extends VerticalLayout {
                 throw new SQLException("Aucun terrain disponible. Créez d'abord des terrains.");
             }
             
+            
+            // 3.5. Inscrire automatiquement tous les joueurs au tournoi s'ils ne le sont pas déjà
+            tournoi.inscrireTousLesJoueurs(con);
             // 4. Récupérer les joueurs inscrits
             List<Joueur> joueurs = tournoi.getJoueursInscrits(con);
             if (joueurs.size() < nbMatchs * tournoi.getNbJoueursParEquipe() * 2) {
@@ -385,13 +388,13 @@ public class GestionRondesMatchsView extends VerticalLayout {
                 // Créer équipe 1
                 int equipe1Id = creerEquipe(con, matchId, 1);
                 for (int j = 0; j < joueursParEquipe && joueurIndex < joueurs.size(); j++) {
-                    ajouterJoueurEquipe(con, equipe1Id, joueurs.get(joueurIndex++).getId());
+                    ajouterJoueurEquipe(con, matchId, joueurs.get(joueurIndex++).getId(), 1);
                 }
                 
                 // Créer équipe 2
                 int equipe2Id = creerEquipe(con, matchId, 2);
                 for (int j = 0; j < joueursParEquipe && joueurIndex < joueurs.size(); j++) {
-                    ajouterJoueurEquipe(con, equipe2Id, joueurs.get(joueurIndex++).getId());
+                    ajouterJoueurEquipe(con, matchId, joueurs.get(joueurIndex++).getId(), 2);
                 }
             }
             
@@ -418,11 +421,12 @@ public class GestionRondesMatchsView extends VerticalLayout {
         throw new SQLException("Impossible de créer l'équipe");
     }
 
-    private void ajouterJoueurEquipe(Connection con, int equipeId, int joueurId) throws SQLException {
-        String sql = "INSERT INTO match_joueur (id_equipe, id_joueur) VALUES (?, ?)";
+    private void ajouterJoueurEquipe(Connection con, int matchId, int joueurId, int numeroEquipe) throws SQLException {
+        String sql = "INSERT INTO match_joueur (id_match, id_joueur, numero_equipe) VALUES (?, ?, ?)";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, equipeId);
+            ps.setInt(1, matchId);
             ps.setInt(2, joueurId);
+            ps.setInt(3, numeroEquipe);
             ps.executeUpdate();
         }
     }

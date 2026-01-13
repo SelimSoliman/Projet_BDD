@@ -36,7 +36,6 @@ import fr.insa.toto.webui.extensions.GestionTemplatesView;
 
 // autres vues
 import fr.insa.toto.webui.tournois.CreerTournoiView;
-import fr.insa.toto.webui.utilisateurs.NewRonde;
 
 public class MainMenu extends SideNav {
 
@@ -78,7 +77,6 @@ public class MainMenu extends SideNav {
 
         if (SessionInfo.adminConnected()) {
             tournois.addItem(new SideNavItem("Créer un tournoi", CreerTournoiView.class));
-            tournois.addItem(new SideNavItem("Créer une ronde", NewRonde.class));
         }
 
         /* ===== TERRAINS ===== */
