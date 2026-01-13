@@ -161,12 +161,12 @@ public class GestionTerrainsView extends VerticalLayout {
     }
 
     private MatchInfo getMatchEnCours(Connection con, int terrainId) throws SQLException {
-        String sql = "SELECT m.id, m.score_equipe1, m.score_equipe2, m.statut, " +
+        String sql = "SELECT m.id, m.score_e1, m.score_e2, m.statut, " +
                     "r.numero as ronde_num, t.nom as terrain_nom " +
                     "FROM matchs m " +
                     "INNER JOIN ronde r ON m.ronde_id = r.id " +
                     "INNER JOIN terrain t ON m.terrain_id = t.id " +
-                    "WHERE m.terrain_id = ? AND m.statut != 'clos' " +
+                    "WHERE m.terrain_id = ? AND m.statut != 'CLOS' " +
                     "ORDER BY r.debut DESC LIMIT 1";
         
         try (PreparedStatement ps = con.prepareStatement(sql)) {
@@ -177,8 +177,8 @@ public class GestionTerrainsView extends VerticalLayout {
                         rs.getInt("id"),
                         rs.getInt("ronde_num"),
                         rs.getString("terrain_nom"),
-                        rs.getInt("score_equipe1"),
-                        rs.getInt("score_equipe2")
+                        rs.getInt("score_e1"),
+                        rs.getInt("score_e2")
                     );
                 }
             }

@@ -360,6 +360,9 @@ public class GestionRondesMatchsView extends VerticalLayout {
                                       (nbMatchs * tournoi.getNbJoueursParEquipe() * 2) + " joueurs.");
             }
             
+            // 4.5. Mélanger aléatoirement la liste des joueurs pour varier les équipes
+            java.util.Collections.shuffle(joueurs);
+            
             // 5. Créer les matchs
             int joueursParEquipe = tournoi.getNbJoueursParEquipe();
             int joueurIndex = 0;
