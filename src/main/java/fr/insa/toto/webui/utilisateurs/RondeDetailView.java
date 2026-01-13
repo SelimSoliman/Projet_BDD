@@ -163,5 +163,40 @@ public class RondeDetailView extends VerticalLayout implements BeforeEnterObserv
         }
         if (last != null) throw last;
         return List.of();
+        
     }
+    private static class InfoRonde {
+    int idTournoi;
+    int numero;
+    InfoRonde(int idTournoi, int numero) {
+        this.idTournoi = idTournoi;
+        this.numero = numero;
+    }
+}
+
+private InfoRonde getInfoRonde(Connection con, int rondeId) throws SQLException {
+    String sql = "SELECT id_tournoi, numero FROM ronde WHERE id = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, rondeId);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (!rs.next()) return null;
+            return new InfoRonde(
+                    rs.getInt("id_tournoi"),
+                    rs.getInt("numero")
+            );
+        }
+    }
+}
+
+private int getNbRondesDansTournoi(Connection con, int idTournoi) throws SQLException {
+    String sql = "SELECT COUNT(*) AS nb FROM ronde WHERE id_tournoi = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, idTournoi);
+        try (ResultSet rs = ps.executeQuery()) {
+            rs.next();
+            return rs.getInt("nb");
+        }
+    }
+}
+
 }
