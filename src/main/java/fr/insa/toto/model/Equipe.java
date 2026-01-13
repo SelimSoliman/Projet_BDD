@@ -198,7 +198,7 @@ public static List<Equipe> toutesLesEquipes(Connection con) throws SQLException 
                             rsJ.getInt("id"),
                             rsJ.getString("surnom"),
                             rsJ.getString("categorie"),
-                            rsJ.getInt("taille_cm"),
+                            rsJ.getInt("taillecm"),  // ✅ CORRIGÉ: taillecm au lieu de taille_cm
                             rsJ.getString("nom"),
                             rsJ.getString("prenom"),
                             rsJ.getString("sexe"),

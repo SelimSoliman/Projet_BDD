@@ -375,10 +375,11 @@ public class GestionTerrainsView extends VerticalLayout {
     private List<EquipeInfo> getEquipesDuMatch(Connection con, int matchId) throws SQLException {
         List<EquipeInfo> equipes = new ArrayList<>();
         
-        String sql = "SELECT DISTINCT e.id, e.nom " +
+        // Récupérer les 2 équipes du match (numéro 1 et 2)
+        String sql = "SELECT e.id, e.numero, e.score " +
                     "FROM equipe e " +
-                    "INNER JOIN matchs m ON (m.equipe1_id = e.id OR m.equipe2_id = e.id) " +
-                    "WHERE m.id = ?";
+                    "WHERE e.id_match = ? " +
+                    "ORDER BY e.numero";
         
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, matchId);
@@ -386,7 +387,7 @@ public class GestionTerrainsView extends VerticalLayout {
                 while (rs.next()) {
                     equipes.add(new EquipeInfo(
                         rs.getInt("id"),
-                        rs.getString("nom")
+                        "Équipe " + rs.getInt("numero")  // Générer un nom à partir du numéro
                     ));
                 }
             }
@@ -398,13 +399,30 @@ public class GestionTerrainsView extends VerticalLayout {
     private List<JoueurInfo> getJoueursEquipe(Connection con, int equipeId) throws SQLException {
         List<JoueurInfo> joueurs = new ArrayList<>();
         
-        String sql = "SELECT j.id, j.nom, j.prenom, j.sexe, j.niveau, j.taille " +
+        // D'abord récupérer le match_id et le numero de l'équipe
+        String sqlEquipe = "SELECT id_match, numero FROM equipe WHERE id = ?";
+        int matchId = 0;
+        int numeroEquipe = 0;
+        
+        try (PreparedStatement ps = con.prepareStatement(sqlEquipe)) {
+            ps.setInt(1, equipeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    matchId = rs.getInt("id_match");
+                    numeroEquipe = rs.getInt("numero");
+                }
+            }
+        }
+        
+        // Ensuite récupérer les joueurs via match_joueur
+        String sql = "SELECT j.id, j.nom, j.prenom, j.sexe, j.categorie, j.taillecm " +
                     "FROM joueur j " +
-                    "INNER JOIN contient c ON c.joueur_id = j.id " +
-                    "WHERE c.equipe_id = ?";
+                    "INNER JOIN match_joueur mj ON mj.id_joueur = j.id " +
+                    "WHERE mj.id_match = ? AND mj.numero_equipe = ?";
         
         try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, equipeId);
+            ps.setInt(1, matchId);
+            ps.setInt(2, numeroEquipe);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     joueurs.add(new JoueurInfo(
@@ -412,8 +430,8 @@ public class GestionTerrainsView extends VerticalLayout {
                         rs.getString("nom"),
                         rs.getString("prenom"),
                         rs.getString("sexe"),
-                        rs.getInt("niveau"),
-                        rs.getInt("taille")
+                        0,  // niveau n'existe pas
+                        rs.getInt("taillecm")
                     ));
                 }
             }

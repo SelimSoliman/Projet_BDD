@@ -65,12 +65,21 @@ public class ListeTerrainsView extends VerticalLayout {
 
         // Colonne Actions (admin uniquement)
         grid.addComponentColumn(terrain -> {
+            var layout = new com.vaadin.flow.component.orderedlayout.HorizontalLayout();
+            layout.setSpacing(true);
+            
             Button toggleButton = new Button(
                 terrain.estDisponible() ? "🔒 Occuper" : "🔓 Libérer"
             );
             toggleButton.addThemeVariants(ButtonVariant.LUMO_SMALL);
             toggleButton.addClickListener(e -> toggleDisponibilite(terrain));
-            return toggleButton;
+            
+            Button deleteButton = new Button("🗑️ Supprimer");
+            deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+            deleteButton.addClickListener(e -> supprimerTerrain(terrain));
+            
+            layout.add(toggleButton, deleteButton);
+            return layout;
         }).setHeader("Actions");
 
         add(grid);
@@ -146,5 +155,47 @@ public class ListeTerrainsView extends VerticalLayout {
                             5000, Notification.Position.MIDDLE)
                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
+    }
+
+    private void supprimerTerrain(Terrain terrain) {
+        // Dialog de confirmation
+        com.vaadin.flow.component.dialog.Dialog confirmDialog = new com.vaadin.flow.component.dialog.Dialog();
+        confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");
+        
+        VerticalLayout content = new VerticalLayout();
+        content.add(new Paragraph("Êtes-vous sûr de vouloir supprimer le terrain \"" + terrain.getNom() + "\" ?"));
+        content.add(new Paragraph("Cette action est irréversible."));
+        
+        com.vaadin.flow.component.orderedlayout.HorizontalLayout buttons = 
+            new com.vaadin.flow.component.orderedlayout.HorizontalLayout();
+        
+        Button confirmerButton = new Button("Oui, supprimer", e -> {
+            try (Connection con = ConnectionPool.getConnection()) {
+                Terrain.supprimer(con, terrain.getId());
+                
+                Notification.show("✅ Terrain \"" + terrain.getNom() + "\" supprimé avec succès", 
+                                3000, Notification.Position.MIDDLE)
+                           .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                
+                confirmDialog.close();
+                chargerTerrains();
+                updateStats();
+                
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                Notification.show("❌ Erreur lors de la suppression : " + ex.getMessage(), 
+                                5000, Notification.Position.MIDDLE)
+                           .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+        confirmerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+        
+        Button annulerButton = new Button("Annuler", e -> confirmDialog.close());
+        
+        buttons.add(confirmerButton, annulerButton);
+        content.add(buttons);
+        
+        confirmDialog.add(content);
+        confirmDialog.open();
     }
 }

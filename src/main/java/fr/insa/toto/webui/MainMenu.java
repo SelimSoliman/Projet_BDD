@@ -58,7 +58,7 @@ public class MainMenu extends SideNav {
 }
 joueurs.addItem(new SideNavItem("Liste des joueurs", ListeJoueursView.class));
 
-        joueurs.addItem(new SideNavItem("Liste des joueurs", ListeJoueursView.class));
+        
 
         /* ===== ✅ ÉQUIPES ===== */
         SideNavItem equipes = new SideNavItem("Équipes");

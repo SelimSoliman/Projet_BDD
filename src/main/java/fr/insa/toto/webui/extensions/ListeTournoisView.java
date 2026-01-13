@@ -51,6 +51,13 @@ public class ListeTournoisView extends VerticalLayout {
         grid.addColumn(t -> t.getStatut().toString()).setHeader("Statut").setAutoWidth(true);
         grid.addColumn(TournoiMulti::getNbTerrains).setHeader("Nb terrains").setAutoWidth(true);
         grid.addColumn(TournoiMulti::getNbJoueursParEquipe).setHeader("Joueurs/équipe").setAutoWidth(true);
+        // Colonne Actions avec bouton de suppression
+grid.addComponentColumn(tournoi -> {
+    Button deleteButton = new Button("🗑️ Supprimer");
+    deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+    deleteButton.addClickListener(e -> supprimerTournoi(tournoi));
+    return deleteButton;
+}).setHeader("Actions");
 
         // ✅ SOLUTION 1 : Clic sur ligne = sélection automatique
         grid.setSelectionMode(Grid.SelectionMode.SINGLE);
@@ -137,5 +144,56 @@ public class ListeTournoisView extends VerticalLayout {
                 .set("border-left", "4px solid #1976d2")
                 .set("font-weight", "bold");
         }
+    }
+/**
+     * Supprime un tournoi après confirmation
+     */
+    private void supprimerTournoi(TournoiMulti tournoi) {
+        com.vaadin.flow.component.dialog.Dialog confirmDialog = new com.vaadin.flow.component.dialog.Dialog();
+        confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");
+        
+        VerticalLayout content = new VerticalLayout();
+        content.add(new Paragraph("Êtes-vous sûr de vouloir supprimer le tournoi \"" + tournoi.getNom() + "\" ?"));
+        content.add(new Paragraph("⚠️ ATTENTION : Cela supprimera aussi toutes les rondes et matchs associés."));
+        content.add(new Paragraph("Cette action est irréversible."));
+        
+        com.vaadin.flow.component.orderedlayout.HorizontalLayout buttons = 
+            new com.vaadin.flow.component.orderedlayout.HorizontalLayout();
+        
+        Button confirmerButton = new Button("Oui, supprimer", e -> {
+            try (Connection con = ConnectionPool.getConnection()) {
+                // Supprimer le tournoi (cascade supprime rondes et matchs)
+                TournoiMulti.supprimer(con, tournoi.getId());
+                
+                Notification.show("✅ Tournoi \"" + tournoi.getNom() + "\" supprimé avec succès", 
+                                3000, Notification.Position.MIDDLE)
+                           .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                
+                // Si c'était le tournoi actif, le retirer de la session
+                if (SessionInfo.getTournoiActif() != null && 
+                    SessionInfo.getTournoiActif().getId() == tournoi.getId()) {
+                    SessionInfo.setTournoiActif(null);
+                }
+                
+                confirmDialog.close();
+                chargerTournois();
+                updateTournoiActifInfo();
+                
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                Notification.show("❌ Erreur lors de la suppression : " + ex.getMessage(), 
+                                5000, Notification.Position.MIDDLE)
+                           .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+        confirmerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+        
+        Button annulerButton = new Button("Annuler", e -> confirmDialog.close());
+        
+        buttons.add(confirmerButton, annulerButton);
+        content.add(buttons);
+        
+        confirmDialog.add(content);
+        confirmDialog.open();
     }
 }

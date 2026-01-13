@@ -427,4 +427,11 @@ public List<Joueur> getJoueursInscrits(Connection con) throws SQLException {
                    ", Score: " + scoreTotal;
         }
     }
+public static void supprimer(Connection con, int id) throws SQLException {
+    String sql = "DELETE FROM tournoi WHERE id = ?";
+    try (PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setInt(1, id);
+        ps.executeUpdate();
+    }
+}
 }

@@ -56,17 +56,19 @@ public class VuePrincipale extends VerticalLayout {
         // STATS - Récupération depuis la BDD
         int nbJoueurs = 0;
         int nbRondes = 0;
-        int nbMatchsEnCours = 0;
+        int nbTournois = 0;
 
         try (Connection con = ConnectionPool.getConnection()) {
             // Nombre de joueurs
             nbJoueurs = Joueur.count(con);
 
+            // Nombre de tournois
+            nbTournois = compterTournois(con);
+
             // Nombre de rondes (tournoi unique)
             Tournoi tournoi = Tournoi.getTournoiUnique(con);
             if (tournoi != null) {
                 nbRondes = compterRondes(con, tournoi.getId());
-                nbMatchsEnCours = compterMatchsEnCours(con);
             }
 
         } catch (SQLException ex) {
@@ -78,7 +80,7 @@ public class VuePrincipale extends VerticalLayout {
         stats.addClassName("stats");
         stats.add(statCard(String.valueOf(nbJoueurs), "Joueurs"));
         stats.add(statCard(String.valueOf(nbRondes), "Rondes"));
-        stats.add(statCard(String.valueOf(nbMatchsEnCours), "Matchs en cours"));
+        stats.add(statCard(String.valueOf(nbTournois), "Tournois"));
 
         container.add(hero, stats);
         add(container);
@@ -101,10 +103,10 @@ public class VuePrincipale extends VerticalLayout {
     }
 
     /**
-     * Compte le nombre de matchs EN_COURS dans toute la base
+     * Compte le nombre de tournois dans toute la base
      */
-    private int compterMatchsEnCours(Connection con) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM matchs WHERE statut = 'EN_COURS'";
+    private int compterTournois(Connection con) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM tournoi";
         try (PreparedStatement ps = con.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {

@@ -2,11 +2,13 @@ package fr.insa.toto.webui.joueurs;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -104,6 +106,14 @@ public class ListeJoueursView extends VerticalLayout {
             .setHeader("Âge")
             .setAutoWidth(true);
 
+        // Colonne Actions avec bouton de suppression
+        grid.addComponentColumn(joueur -> {
+            Button deleteButton = new Button("🗑️ Supprimer");
+            deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+            deleteButton.addClickListener(e -> supprimerJoueur(joueur));
+            return deleteButton;
+        }).setHeader("Actions");
+
         add(grid);
 
         // Aide
@@ -150,5 +160,49 @@ public class ListeJoueursView extends VerticalLayout {
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Supprime un joueur après confirmation
+     */
+    private void supprimerJoueur(Joueur joueur) {
+        Dialog confirmDialog = new Dialog();
+        confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");
+        
+        VerticalLayout content = new VerticalLayout();
+        content.add(new Paragraph("Êtes-vous sûr de vouloir supprimer le joueur \"" + 
+                                  joueur.getSurnom() + "\" (" + joueur.getNom() + " " + joueur.getPrenom() + ") ?"));
+        content.add(new Paragraph("Cette action est irréversible."));
+        
+        HorizontalLayout buttons = new HorizontalLayout();
+        
+        Button confirmerButton = new Button("Oui, supprimer", e -> {
+            try (Connection con = ConnectionPool.getConnection()) {
+                Joueur.supprimer(con, joueur.getId());
+                
+                Notification.show("✅ Joueur \"" + joueur.getSurnom() + "\" supprimé avec succès", 
+                                3000, Notification.Position.MIDDLE)
+                           .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                
+                confirmDialog.close();
+                chargerJoueurs();
+                updateStats();
+                
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                Notification.show("❌ Erreur lors de la suppression : " + ex.getMessage(), 
+                                5000, Notification.Position.MIDDLE)
+                           .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            }
+        });
+        confirmerButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
+        
+        Button annulerButton = new Button("Annuler", e -> confirmDialog.close());
+        
+        buttons.add(confirmerButton, annulerButton);
+        content.add(buttons);
+        
+        confirmDialog.add(content);
+        confirmDialog.open();
     }
 }

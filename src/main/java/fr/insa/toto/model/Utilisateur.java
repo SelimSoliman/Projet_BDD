@@ -197,6 +197,20 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
         return res;
     }
 
+    /**
+     * Supprime un utilisateur de la base de données (méthode statique)
+     * @param con connexion à la base de données
+     * @param id identifiant de l'utilisateur à supprimer
+     * @throws SQLException si erreur SQL
+     */
+    public static void supprimer(Connection con, int id) throws SQLException {
+        String sql = "DELETE FROM utilisateur WHERE id = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+
     // ========== GETTERS / SETTERS ==========
 
     /**
