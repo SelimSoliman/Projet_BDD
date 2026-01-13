@@ -1,21 +1,3 @@
-/*
-Copyright 2000- Francois de Bertrand de Beuvron
-
-This file is part of CoursBeuvron.
-
-CoursBeuvron is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-CoursBeuvron is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with CoursBeuvron.  If not, see <http://www.gnu.org/licenses/>.
- */
 package fr.insa.toto.webui.utilisateurs;
 
 import com.vaadin.flow.component.button.Button;
@@ -41,10 +23,6 @@ import fr.insa.toto.webui.session.SessionInfo;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-/**
- *
- * @author ThinkPad
- */
 @Route(value = "utilisateurs/liste", layout = MainLayout.class)
 @PageTitle("Teqball")
 public class ListeUtilisateurs extends VerticalLayout {
@@ -64,15 +42,21 @@ public class ListeUtilisateurs extends VerticalLayout {
                     : VaadinIcon.THUMBS_DOWN.create();
         })).setHeader("admin?");
 
-        // Colonne Actions avec bouton de suppression
+        // Colonne Actions avec bouton de suppression (UNIQUEMENT POUR LES ADMINS)
         grid.addComponentColumn(utilisateur -> {
+            // ✅ CORRECTION : Vérifier si l'utilisateur connecté est admin
+            if (!SessionInfo.adminConnected()) {
+                // Si ce n'est pas un admin, ne rien afficher
+                return new Paragraph("");
+            }
+            
             Button deleteButton = new Button("🗑️ Supprimer");
             deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
             deleteButton.addClickListener(e -> supprimerUtilisateur(utilisateur));
             
             // Protection : ne pas permettre de supprimer l'utilisateur actuellement connecté
             try {
-                Utilisateur userConnecte = SessionInfo.userConnected();  // ✅ CORRIGÉ
+                Utilisateur userConnecte = SessionInfo.userConnected();
                 if (userConnecte != null && utilisateur.getId() == userConnecte.getId()) {
                     deleteButton.setEnabled(false);
                     deleteButton.setText("⚠️ Vous");
@@ -99,9 +83,17 @@ public class ListeUtilisateurs extends VerticalLayout {
     }
 
     /**
-     * Supprime un utilisateur après confirmation
+     * Supprime un utilisateur après confirmation (ADMIN UNIQUEMENT)
      */
     private void supprimerUtilisateur(Utilisateur utilisateur) {
+        // ✅ DOUBLE VÉRIFICATION : Sécurité côté serveur
+        if (!SessionInfo.adminConnected()) {
+            Notification.show("❌ Accès refusé : seuls les administrateurs peuvent supprimer des utilisateurs", 
+                            5000, Notification.Position.MIDDLE)
+                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+        
         Dialog confirmDialog = new Dialog();
         confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");
         

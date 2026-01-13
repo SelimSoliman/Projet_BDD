@@ -13,6 +13,7 @@ import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.Terrain;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.session.SessionInfo;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -63,8 +64,14 @@ public class ListeTerrainsView extends VerticalLayout {
             .setAutoWidth(true)
             .setSortable(true);
 
-        // Colonne Actions (admin uniquement)
+        // Colonne Actions (ADMIN UNIQUEMENT)
         grid.addComponentColumn(terrain -> {
+            // ✅ CORRECTION : Vérifier si l'utilisateur est admin
+            if (!SessionInfo.adminConnected()) {
+                // Si ce n'est pas un admin, ne rien afficher
+                return new Paragraph("");
+            }
+            
             var layout = new com.vaadin.flow.component.orderedlayout.HorizontalLayout();
             layout.setSpacing(true);
             
@@ -135,7 +142,18 @@ public class ListeTerrainsView extends VerticalLayout {
         }
     }
 
+    /**
+     * Toggle la disponibilité d'un terrain (ADMIN UNIQUEMENT)
+     */
     private void toggleDisponibilite(Terrain terrain) {
+        // ✅ VÉRIFICATION : Sécurité côté serveur
+        if (!SessionInfo.adminConnected()) {
+            Notification.show("❌ Accès refusé : seuls les administrateurs peuvent modifier les terrains", 
+                            5000, Notification.Position.MIDDLE)
+                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+        
         try (Connection con = ConnectionPool.getConnection()) {
             terrain.basculerDisponibilite();
             // Note: Il faudrait une méthode updateInDB() dans Terrain
@@ -157,7 +175,18 @@ public class ListeTerrainsView extends VerticalLayout {
         }
     }
 
+    /**
+     * Supprime un terrain après confirmation (ADMIN UNIQUEMENT)
+     */
     private void supprimerTerrain(Terrain terrain) {
+        // ✅ DOUBLE VÉRIFICATION : Sécurité côté serveur
+        if (!SessionInfo.adminConnected()) {
+            Notification.show("❌ Accès refusé : seuls les administrateurs peuvent supprimer des terrains", 
+                            5000, Notification.Position.MIDDLE)
+                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+        
         // Dialog de confirmation
         com.vaadin.flow.component.dialog.Dialog confirmDialog = new com.vaadin.flow.component.dialog.Dialog();
         confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");

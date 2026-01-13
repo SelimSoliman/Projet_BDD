@@ -12,6 +12,7 @@ import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.router.RouterLink;
 import fr.insa.beuvron.utils.database.ConnectionSimpleSGBD;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.joueurs.ListeJoueursView;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -96,7 +97,7 @@ public class MatchDetailView extends VerticalLayout implements BeforeEnterObserv
                         new RouteParameters("id", String.valueOf(info.rondeId))
                 ));
             }
-            nav.add(new RouterLink("Retour joueurs", JoueursView.class));
+            nav.add(new RouterLink("Retour joueurs", ListeJoueursView.class));
 
         } catch (SQLException e) {
             e.printStackTrace();

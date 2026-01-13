@@ -15,6 +15,7 @@ import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.Joueur;
 import fr.insa.toto.webui.MainLayout;
+import fr.insa.toto.webui.session.SessionInfo;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -106,24 +107,27 @@ public class ListeJoueursView extends VerticalLayout {
             .setHeader("Âge")
             .setAutoWidth(true);
 
-        // Colonne Actions avec boutons
+        // ✅ Colonne Actions avec boutons Détails (tous) et Supprimer (admin uniquement)
         grid.addComponentColumn(joueur -> {
             HorizontalLayout actions = new HorizontalLayout();
+            actions.setSpacing(true);
             
-            // Bouton "Voir détails"
+            // Bouton "Voir détails" - VISIBLE POUR TOUS
             Button detailButton = new Button("👁️ Détails");
             detailButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_PRIMARY);
             detailButton.addClickListener(e -> {
                 getUI().ifPresent(ui -> ui.navigate("joueurs/detail/" + joueur.getId()));
             });
+            actions.add(detailButton);
             
-            // Bouton "Supprimer"
-            Button deleteButton = new Button("🗑️");
-            deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
-            deleteButton.addClickListener(e -> supprimerJoueur(joueur));
+            // Bouton "Supprimer" - UNIQUEMENT POUR LES ADMINS
+            if (SessionInfo.adminConnected()) {
+                Button deleteButton = new Button("🗑️");
+                deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+                deleteButton.addClickListener(e -> supprimerJoueur(joueur));
+                actions.add(deleteButton);
+            }
             
-            actions.add(detailButton, deleteButton);
-            actions.setSpacing(true);
             return actions;
         }).setHeader("Actions").setAutoWidth(true);
 
@@ -185,9 +189,17 @@ public class ListeJoueursView extends VerticalLayout {
     }
 
     /**
-     * Supprime un joueur après confirmation
+     * Supprime un joueur après confirmation (ADMIN UNIQUEMENT)
      */
     private void supprimerJoueur(Joueur joueur) {
+        // ✅ DOUBLE VÉRIFICATION : Sécurité côté serveur
+        if (!SessionInfo.adminConnected()) {
+            Notification.show("❌ Accès refusé : seuls les administrateurs peuvent supprimer des joueurs", 
+                            5000, Notification.Position.MIDDLE)
+                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+        
         Dialog confirmDialog = new Dialog();
         confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");
         

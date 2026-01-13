@@ -51,13 +51,20 @@ public class ListeTournoisView extends VerticalLayout {
         grid.addColumn(t -> t.getStatut().toString()).setHeader("Statut").setAutoWidth(true);
         grid.addColumn(TournoiMulti::getNbTerrains).setHeader("Nb terrains").setAutoWidth(true);
         grid.addColumn(TournoiMulti::getNbJoueursParEquipe).setHeader("Joueurs/équipe").setAutoWidth(true);
-        // Colonne Actions avec bouton de suppression
-grid.addComponentColumn(tournoi -> {
-    Button deleteButton = new Button("🗑️ Supprimer");
-    deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
-    deleteButton.addClickListener(e -> supprimerTournoi(tournoi));
-    return deleteButton;
-}).setHeader("Actions");
+        
+        // ✅ Colonne Actions avec bouton de suppression (ADMIN UNIQUEMENT)
+        grid.addComponentColumn(tournoi -> {
+            // ✅ CORRECTION : Vérifier si l'utilisateur est admin
+            if (!SessionInfo.adminConnected()) {
+                // Si ce n'est pas un admin, ne rien afficher
+                return new Paragraph("");
+            }
+            
+            Button deleteButton = new Button("🗑️ Supprimer");
+            deleteButton.addThemeVariants(ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+            deleteButton.addClickListener(e -> supprimerTournoi(tournoi));
+            return deleteButton;
+        }).setHeader("Actions");
 
         // ✅ SOLUTION 1 : Clic sur ligne = sélection automatique
         grid.setSelectionMode(Grid.SelectionMode.SINGLE);
@@ -145,10 +152,19 @@ grid.addComponentColumn(tournoi -> {
                 .set("font-weight", "bold");
         }
     }
-/**
-     * Supprime un tournoi après confirmation
+    
+    /**
+     * Supprime un tournoi après confirmation (ADMIN UNIQUEMENT)
      */
     private void supprimerTournoi(TournoiMulti tournoi) {
+        // ✅ DOUBLE VÉRIFICATION : Sécurité côté serveur
+        if (!SessionInfo.adminConnected()) {
+            Notification.show("❌ Accès refusé : seuls les administrateurs peuvent supprimer des tournois", 
+                            5000, Notification.Position.MIDDLE)
+                       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+            return;
+        }
+        
         com.vaadin.flow.component.dialog.Dialog confirmDialog = new com.vaadin.flow.component.dialog.Dialog();
         confirmDialog.setHeaderTitle("⚠️ Confirmer la suppression");
         
