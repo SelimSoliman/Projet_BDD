@@ -53,7 +53,11 @@ public class MainMenu extends SideNav {
 
         /* ===== ✅ JOUEURS ===== */
         SideNavItem joueurs = new SideNavItem("Joueurs");
-        joueurs.addItem(new SideNavItem("Créer un joueur", CreationJoueurView.class));
+       if (SessionInfo.adminConnected()) {
+    joueurs.addItem(new SideNavItem("Créer un joueur", CreationJoueurView.class));
+}
+joueurs.addItem(new SideNavItem("Liste des joueurs", ListeJoueursView.class));
+
         joueurs.addItem(new SideNavItem("Liste des joueurs", ListeJoueursView.class));
 
         /* ===== ✅ ÉQUIPES ===== */
@@ -100,7 +104,7 @@ public class MainMenu extends SideNav {
             addItem(rondesMatchs);
         }
 
-        if (SessionInfo.connected()) {
+        if (SessionInfo.playerConnected()) {
             addItem(new SideNavItem("Mon Espace Joueur", InterfaceJoueurView.class));
         }
 

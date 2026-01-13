@@ -16,7 +16,7 @@ import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
 import fr.insa.toto.model.Joueur;
 import fr.insa.toto.webui.MainLayout;
-
+import fr.insa.toto.model.Utilisateur;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -62,6 +62,8 @@ public class CreationJoueurView extends VerticalLayout {
 
         // ========== Informations détaillées ==========
         nomField = new TextField("Nom");
+        nomField.setRequired(true);
+
         nomField.setPlaceholder("Ex: Dupont");
 
         prenomField = new TextField("Prénom");
@@ -115,6 +117,13 @@ public class CreationJoueurView extends VerticalLayout {
                        .addThemeVariants(NotificationVariant.LUMO_ERROR);
             return;
         }
+        if (nom.isEmpty()) {
+    Notification.show("⚠️ Le nom est obligatoire (il sert de mot de passe)",
+            3000, Notification.Position.MIDDLE)
+       .addThemeVariants(NotificationVariant.LUMO_ERROR);
+    return;
+}
+
 
         if (taillecm == null || taillecm <= 0) {
             Notification.show("⚠️ La taille doit être un nombre positif", 
@@ -136,7 +145,7 @@ public class CreationJoueurView extends VerticalLayout {
                 surnom, 
                 categorie.isEmpty() ? "Non définie" : categorie, 
                 taillecm,
-                nom.isEmpty() ? "?" : nom,
+                nom,
                 prenom.isEmpty() ? "?" : prenom,
                 sexe != null ? sexe : "?",
                 dateNaissance
@@ -144,6 +153,14 @@ public class CreationJoueurView extends VerticalLayout {
 
             // Sauvegarder dans la BDD
             nouveauJoueur.saveInDB(con);
+            Utilisateur compte = new Utilisateur(
+        nouveauJoueur.getSurnom(), // identifiant
+        nouveauJoueur.getNom(),    // mot de passe = nom
+        Utilisateur.ROLE_PLAYER
+);
+compte.setIdJoueur(nouveauJoueur.getId());
+compte.saveInDB(con); // si ton ClasseMiroir expose save(con)
+
 
             Notification notification = Notification.show(
                 "✅ Joueur créé avec succès : " + nouveauJoueur.getSurnom() + " (ID: " + nouveauJoueur.getId() + ")",

@@ -19,14 +19,6 @@ public class GestionBDD {
 
                 // ========== TABLES DE BASE ==========
 
-                // ----- Table utilisateur (roles admin / user) -----
-                st.executeUpdate("create table utilisateur ( "
-                        + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
-                        + " surnom varchar(30) not null unique,"
-                        + " pass varchar(20) not null,"
-                        + " role integer not null"
-                        + ")");
-
                 // ----- Table joueur -----
                 st.executeUpdate("create table joueur ( "
                         + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
@@ -37,6 +29,16 @@ public class GestionBDD {
                         + " taillecm int,"
                         + " sexe char(1),"
                         + " date_naissance date"
+                        + ")");
+
+                // ----- Table utilisateur (roles admin / user) -----
+                st.executeUpdate("create table utilisateur ( "
+                        + ConnectionSimpleSGBD.sqlForGeneratedKeys(con, "id") + ","
+                        + " surnom varchar(30) not null unique,"
+                        + " pass varchar(20) not null,"
+                        + " role integer not null,"
+                        + " id_joueur integer,"
+                        + " foreign key (id_joueur) references joueur(id)"
                         + ")");
 
                 // ----- Table tournoi (avec extensions multi-tournoi) -----
@@ -261,43 +263,43 @@ public class GestionBDD {
             System.out.println("🗑️  Suppression des contraintes...");
 
             // Contraintes Extensions 6 (Templates)
-            try { st.executeUpdate("alter table template_type_jeu drop constraint fk_template_tj_type"); } 
+            try { st.executeUpdate("alter table template_type_jeu drop constraint fk_template_tj_type"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table template_type_jeu drop constraint fk_template_tj_template"); } 
+            try { st.executeUpdate("alter table template_type_jeu drop constraint fk_template_tj_template"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table template_terrain drop constraint fk_template_terrain_terrain"); } 
+            try { st.executeUpdate("alter table template_terrain drop constraint fk_template_terrain_terrain"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table template_terrain drop constraint fk_template_terrain_template"); } 
+            try { st.executeUpdate("alter table template_terrain drop constraint fk_template_terrain_template"); }
             catch (SQLException ex) {}
 
             // Contraintes Extensions 4-5 (Types de jeu)
-            try { st.executeUpdate("alter table terrain_type_jeu drop constraint fk_terrain_tj_type"); } 
+            try { st.executeUpdate("alter table terrain_type_jeu drop constraint fk_terrain_tj_type"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table terrain_type_jeu drop constraint fk_terrain_tj_terrain"); } 
+            try { st.executeUpdate("alter table terrain_type_jeu drop constraint fk_terrain_tj_terrain"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table matchs drop constraint fk_match_type_jeu"); } 
+            try { st.executeUpdate("alter table matchs drop constraint fk_match_type_jeu"); }
             catch (SQLException ex) {}
 
             // Contraintes Extension 2 (Multi-tournoi)
-            try { st.executeUpdate("alter table classement_global drop constraint fk_classement_joueur"); } 
+            try { st.executeUpdate("alter table classement_global drop constraint fk_classement_joueur"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table inscription_tournoi drop constraint fk_inscription_joueur"); } 
+            try { st.executeUpdate("alter table inscription_tournoi drop constraint fk_inscription_joueur"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table inscription_tournoi drop constraint fk_inscription_tournoi"); } 
+            try { st.executeUpdate("alter table inscription_tournoi drop constraint fk_inscription_tournoi"); }
             catch (SQLException ex) {}
 
             // Contraintes de base
-            try { st.executeUpdate("alter table match_joueur drop constraint fk_mj_joueur"); } 
+            try { st.executeUpdate("alter table match_joueur drop constraint fk_mj_joueur"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table match_joueur drop constraint fk_mj_match"); } 
+            try { st.executeUpdate("alter table match_joueur drop constraint fk_mj_match"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table equipe drop constraint fk_equipe_match"); } 
+            try { st.executeUpdate("alter table equipe drop constraint fk_equipe_match"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table matchs drop constraint fk_match_terrain"); } 
+            try { st.executeUpdate("alter table matchs drop constraint fk_match_terrain"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table matchs drop constraint fk_match_ronde"); } 
+            try { st.executeUpdate("alter table matchs drop constraint fk_match_ronde"); }
             catch (SQLException ex) {}
-            try { st.executeUpdate("alter table ronde drop constraint fk_ronde_tournoi"); } 
+            try { st.executeUpdate("alter table ronde drop constraint fk_ronde_tournoi"); }
             catch (SQLException ex) {}
 
             System.out.println("🗑️  Suppression des tables...");
@@ -317,9 +319,11 @@ public class GestionBDD {
             try { st.executeUpdate("drop table matchs"); } catch (SQLException ex) {}
             try { st.executeUpdate("drop table ronde"); } catch (SQLException ex) {}
             try { st.executeUpdate("drop table terrain"); } catch (SQLException ex) {}
-            try { st.executeUpdate("drop table joueur"); } catch (SQLException ex) {}
             try { st.executeUpdate("drop table tournoi"); } catch (SQLException ex) {}
+
+            // ✅ IMPORTANT : utilisateur AVANT joueur (FK utilisateur.id_joueur -> joueur.id)
             try { st.executeUpdate("drop table utilisateur"); } catch (SQLException ex) {}
+            try { st.executeUpdate("drop table joueur"); } catch (SQLException ex) {}
 
             System.out.println("✅ Schéma supprimé");
         }
@@ -343,7 +347,7 @@ public class GestionBDD {
     public static void main(String[] args) {
         try (Connection con = ConnectionSimpleSGBD.defaultCon()) {
             razBdd(con);
-            
+
             System.out.println("\n📋 Tables créées :");
             System.out.println("   ✓ utilisateur");
             System.out.println("   ✓ joueur");
@@ -361,7 +365,7 @@ public class GestionBDD {
             System.out.println("   ✓ template_tournoi (Ext 6)");
             System.out.println("   ✓ template_terrain (Ext 6)");
             System.out.println("   ✓ template_type_jeu (Ext 6)");
-            
+
         } catch (SQLException ex) {
             System.err.println("❌ Erreur : " + ex.getMessage());
             ex.printStackTrace();

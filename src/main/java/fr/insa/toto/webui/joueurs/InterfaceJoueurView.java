@@ -1,5 +1,6 @@
 package fr.insa.toto.webui.joueurs;
 
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
@@ -9,7 +10,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import fr.insa.beuvron.utils.database.ConnectionPool;
-import fr.insa.toto.model.*;
+import fr.insa.toto.model.Joueur;
+import fr.insa.toto.model.Tournoi;
 import fr.insa.toto.webui.MainLayout;
 import fr.insa.toto.webui.session.SessionInfo;
 
@@ -29,26 +31,36 @@ import java.util.List;
 public class InterfaceJoueurView extends VerticalLayout {
 
     private Joueur joueurCourant;
-    
+
     public InterfaceJoueurView() {
         setPadding(true);
         setSpacing(true);
 
-        if (SessionInfo.userConnected()==null) {
-            add(new Paragraph("Vous devez être connecté pour accéder à cette page."));
+        // ✅ Protection : connecté + joueur uniquement
+        if (!SessionInfo.connected()) {
+            UI.getCurrent().navigate("login");
+            return;
+        }
+        if (!SessionInfo.playerConnected()) {
+            UI.getCurrent().navigate("");
             return;
         }
 
         try (Connection con = ConnectionPool.getConnection()) {
-            // Récupérer le joueur correspondant à l'utilisateur connecté
-            String surnom = SessionInfo.userConnected().getSurnom();
 
+            Integer idJoueur = SessionInfo.getIdJoueurConnecte();
 
-            joueurCourant = findJoueurBySurnom(con, surnom);
+            if (idJoueur == null) {
+                add(new H2("Mon Espace Joueur"));
+                add(new Paragraph("Votre compte joueur n'est pas lié à un profil Joueur (id_joueur manquant)."));
+                return;
+            }
+
+            joueurCourant = findJoueurById(con, idJoueur);
 
             if (joueurCourant == null) {
-                add(new H2("Bienvenue " + surnom));
-                add(new Paragraph("Vous n'êtes pas encore inscrit comme joueur dans le tournoi."));
+                add(new H2("Mon Espace Joueur"));
+                add(new Paragraph("Profil joueur introuvable pour id_joueur = " + idJoueur));
                 return;
             }
 
@@ -88,7 +100,7 @@ public class InterfaceJoueurView extends VerticalLayout {
         int scoreTotal = calculerScoreTotal(con);
         int nbMatchsJoues = compterMatchsJoues(con);
         int victoires = compterVictoires(con);
-        
+
         VerticalLayout stats = new VerticalLayout();
         stats.add(new Paragraph("Score total : " + scoreTotal));
         stats.add(new Paragraph("Matchs joués : " + nbMatchsJoues));
@@ -102,7 +114,7 @@ public class InterfaceJoueurView extends VerticalLayout {
 
     private void afficherMesMatchs(Connection con) throws SQLException {
         List<MatchInfo> matchs = recupererMesMatchs(con);
-        
+
         if (matchs.isEmpty()) {
             add(new Paragraph("Vous n'avez pas encore participé à des matchs."));
             return;
@@ -115,28 +127,29 @@ public class InterfaceJoueurView extends VerticalLayout {
         grid.addColumn(MatchInfo::getScoreAdverse).setHeader("Score adverse");
         grid.addColumn(m -> m.isVictoire() ? "Victoire" : "Défaite").setHeader("Résultat");
         grid.addColumn(MatchInfo::getPartenaire).setHeader("Partenaire");
-        
+
         grid.setItems(matchs);
         add(grid);
     }
 
-    private Joueur findJoueurBySurnom(Connection con, String surnom) throws SQLException {
-        String sql = "SELECT * FROM joueur WHERE surnom = ?";
+    // ✅ Nouveau : récupérer joueur par id
+    private Joueur findJoueurById(Connection con, int id) throws SQLException {
+        String sql = "SELECT * FROM joueur WHERE id = ?";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, surnom);
+            ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return new Joueur(
-                        rs.getInt("id"),
-                        rs.getString("surnom"),
-                        rs.getString("categorie"),
-                        rs.getInt("taillecm"),
-                        rs.getString("nom"),
-                        rs.getString("prenom"),
-                        rs.getString("sexe"),
-                        rs.getDate("date_naissance") != null 
-                            ? rs.getDate("date_naissance").toLocalDate() 
-                            : null
+                            rs.getInt("id"),
+                            rs.getString("surnom"),
+                            rs.getString("categorie"),
+                            rs.getInt("taillecm"),
+                            rs.getString("nom"),
+                            rs.getString("prenom"),
+                            rs.getString("sexe"),
+                            rs.getDate("date_naissance") != null
+                                    ? rs.getDate("date_naissance").toLocalDate()
+                                    : null
                     );
                 }
             }
@@ -211,18 +224,18 @@ public class InterfaceJoueurView extends VerticalLayout {
             LEFT JOIN joueur j2 ON j2.id = mj2.id_joueur
             ORDER BY r.numero DESC
             """;
-        
+
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, joueurCourant.getId());
             ps.setInt(2, joueurCourant.getId());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     result.add(new MatchInfo(
-                        rs.getInt("ronde"),
-                        rs.getString("statut"),
-                        rs.getInt("mon_score"),
-                        rs.getInt("score_adverse"),
-                        rs.getString("partenaire")
+                            rs.getInt("ronde"),
+                            rs.getString("statut"),
+                            rs.getInt("mon_score"),
+                            rs.getInt("score_adverse"),
+                            rs.getString("partenaire")
                     ));
                 }
             }
@@ -249,7 +262,6 @@ public class InterfaceJoueurView extends VerticalLayout {
             return scoreEquipe > scoreAdverse;
         }
 
-        // Getters
         public int getRonde() { return ronde; }
         public String getStatut() { return statut; }
         public int getScoreEquipe() { return scoreEquipe; }

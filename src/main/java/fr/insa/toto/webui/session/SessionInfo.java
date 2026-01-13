@@ -29,8 +29,7 @@ public class SessionInfo {
         return user != null && user.isAdmin();
     }
 
-    
-    // ✅ AJOUT
+    // ✅ AJOUT (tu l'avais déjà, je garde)
     public static void login(Utilisateur user) {
         setUserConnected(user);
     }
@@ -39,10 +38,30 @@ public class SessionInfo {
         VaadinSession.getCurrent().setAttribute(USER_ATTRIBUTE, null);
         VaadinSession.getCurrent().setAttribute(TOURNOI_ACTIF_ATTRIBUTE, null);
     }
-public static Optional<Utilisateur> curUser() {
-    return Optional.ofNullable(userConnected());
-}
-   
+
+    public static Optional<Utilisateur> curUser() {
+        return Optional.ofNullable(userConnected());
+    }
+
+    // ===== ✅ JOUEUR (ce qu’il te manquait) =====
+
+    /** True si connecté et rôle joueur */
+    public static boolean playerConnected() {
+        Utilisateur user = userConnected();
+        return user != null && user.isPlayer();
+    }
+
+    /** id du joueur lié au compte (null si pas un joueur) */
+    public static Integer getIdJoueurConnecte() {
+        Utilisateur user = userConnected();
+        return user != null ? user.getIdJoueur() : null;
+    }
+
+    /** login affichable (chez toi c’est le surnom) */
+    public static String getLogin() {
+        Utilisateur u = userConnected();
+        return (u == null) ? null : u.getSurnom();
+    }
 
     // ===== Tournoi actif =====
 
@@ -57,17 +76,4 @@ public static Optional<Utilisateur> curUser() {
     public static boolean tournoiActifExiste() {
         return getTournoiActif() != null;
     }
-    public static String getLogin() {
-    Utilisateur u = userConnected();
-    if (u == null) return null;
-
-    // adapte selon ton modèle Utilisateur :
-    // return u.getLogin();
-    // return u.getNom();
-    // return u.getPrenom();
-
-    return u.toString(); // fallback si tu n'as pas mieux
-}
-
-    
 }

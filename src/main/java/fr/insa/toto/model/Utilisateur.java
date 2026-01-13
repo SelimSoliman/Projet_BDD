@@ -41,10 +41,14 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
     // Constantes pour les rôles
     public static final int ROLE_ADMIN = 1;
     public static final int ROLE_USER = 2;
+    public static final int ROLE_PLAYER = 3; // ✅ AJOUT
 
     private String surnom;
     private String pass;
     private int role;
+
+    // ✅ AJOUT : lien optionnel vers un joueur (null si pas joueur)
+    private Integer idJoueur;
 
     /**
      * pour nouvel utilisateur en mémoire
@@ -54,6 +58,7 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
         this.surnom = surnom;
         this.pass = pass;
         this.role = role;
+        this.idJoueur = null; // ✅ AJOUT
     }
 
     /**
@@ -64,47 +69,63 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
         this.surnom = surnom;
         this.pass = pass;
         this.role = role;
+        this.idJoueur = null; // ✅ AJOUT (pour compat)
+    }
+
+    // ✅ AJOUT : constructeur complet avec idJoueur (utile quand on lit la BD)
+    public Utilisateur(int id, String surnom, String pass, int role, Integer idJoueur) {
+        super(id);
+        this.surnom = surnom;
+        this.pass = pass;
+        this.role = role;
+        this.idJoueur = idJoueur;
     }
 
     @Override
     public Statement saveSansId(Connection con) throws SQLException {
         PreparedStatement insert = con.prepareStatement(
-                "insert into utilisateur (surnom,pass,role) values (?,?,?)",
+                "insert into utilisateur (surnom,pass,role,id_joueur) values (?,?,?,?)", // ✅ MODIF
                 PreparedStatement.RETURN_GENERATED_KEYS);
         insert.setString(1, this.getSurnom());
         insert.setString(2, this.getPass());
         insert.setInt(3, getRole());
+        insert.setObject(4, this.getIdJoueur()); // ✅ AJOUT (null autorisé)
         insert.executeUpdate();
         return insert;
     }
 
     public static List<Utilisateur> tousLesUtilisateur(Connection con) throws SQLException {
         List<Utilisateur> res = new ArrayList<>();
-        try (PreparedStatement pst = con.prepareStatement("select id,surnom,pass,role from utilisateur")) {
+        try (PreparedStatement pst = con.prepareStatement("select id,surnom,pass,role,id_joueur from utilisateur")) { // ✅ MODIF
             try (ResultSet allU = pst.executeQuery()) {
                 while (allU.next()) {
-                    res.add(new Utilisateur(allU.getInt("id"), allU.getString("surnom"),
-                            allU.getString("pass"), allU.getInt("role")));
+                    res.add(new Utilisateur(
+                            allU.getInt("id"),
+                            allU.getString("surnom"),
+                            allU.getString("pass"),
+                            allU.getInt("role"),
+                            (Integer) allU.getObject("id_joueur") // ✅ AJOUT
+                    ));
                 }
             }
         }
         return res;
     }
 
-    public static Optional<Utilisateur> findBySurnomPass(Connection con,String surnom,String pass) throws SQLException {
+    public static Optional<Utilisateur> findBySurnomPass(Connection con, String surnom, String pass) throws SQLException {
         try (PreparedStatement pst = con.prepareStatement(
-                "select id,role from utilisateur where surnom = ? and pass = ?")) {
+                "select id,role,id_joueur from utilisateur where surnom = ? and pass = ?")) { // ✅ MODIF
             pst.setString(1, surnom);
             pst.setString(2, pass);
             ResultSet res = pst.executeQuery();
             if (res.next()) {
-                int id = res.getInt(1);
-                int role = res.getInt(2);
-                return Optional.of(new Utilisateur(id,surnom, pass, role));
+                int id = res.getInt("id");
+                int role = res.getInt("role");
+                Integer idJoueur = (Integer) res.getObject("id_joueur"); // ✅ AJOUT
+                return Optional.of(new Utilisateur(id, surnom, pass, role, idJoueur));
             } else {
                 return Optional.empty();
             }
-
         }
     }
 
@@ -161,14 +182,15 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
     public static List<Utilisateur> findAll(Connection con) throws SQLException {
         List<Utilisateur> res = new ArrayList<>();
         try (PreparedStatement pst = con.prepareStatement(
-                "select id, surnom, pass, role from UTILISATEUR")) {
+                "select id, surnom, pass, role, id_joueur from UTILISATEUR")) { // ✅ MODIF
             try (ResultSet rs = pst.executeQuery()) {
                 while (rs.next()) {
                     int id = rs.getInt("id");
                     String surnom = rs.getString("surnom");
                     String pass = rs.getString("pass");
                     int role = rs.getInt("role");
-                    res.add(new Utilisateur(id, surnom, pass, role));
+                    Integer idJoueur = (Integer) rs.getObject("id_joueur"); // ✅ AJOUT
+                    res.add(new Utilisateur(id, surnom, pass, role, idJoueur));
                 }
             }
         }
@@ -219,6 +241,11 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
         this.role = role;
     }
 
+    // ✅ AJOUT : setter utile quand tu crées le compte joueur
+    public void setIdJoueur(Integer idJoueur) {
+        this.idJoueur = idJoueur;
+    }
+
     /**
      * Vérifie si l'utilisateur est administrateur.
      * @return true si role == ROLE_ADMIN (1), false sinon
@@ -227,12 +254,22 @@ public class Utilisateur extends ClasseMiroir implements Serializable {
         return this.role == ROLE_ADMIN;
     }
 
+    // ✅ tu l'avais : maintenant ça compile car ROLE_PLAYER existe
+    public boolean isPlayer() {
+        return this.role == ROLE_PLAYER;
+    }
+
+    // ✅ tu l'avais : maintenant ça compile car idJoueur existe
+    public Integer getIdJoueur() {
+        return idJoueur;
+    }
+
     @Override
     public String toString() {
         return "Utilisateur{" +
                 "id=" + getId() +
                 ", surnom='" + surnom + '\'' +
-                ", role=" + (isAdmin() ? "ADMIN" : "USER") +
+                ", role=" + (isAdmin() ? "ADMIN" : (isPlayer() ? "PLAYER" : "USER")) +
                 '}';
     }
 }
